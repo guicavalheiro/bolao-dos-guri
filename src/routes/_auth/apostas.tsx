@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { MATCHES, TEAMS, GROUPS, STAGES, type Group, type Match } from "@/lib/data/matches";
-import { getStageState, getUserBets, saveBet, subscribe } from "@/lib/store";
+import { getStageState, getUserBets, saveBet, subscribe, type Bet } from "@/lib/store";
 import { useSession } from "@/hooks/use-session";
 import { Flag } from "@/components/Flag";
 import { useEffect } from "react";
@@ -17,7 +17,15 @@ function BetsPage() {
   const [, force] = useState(0);
   useEffect(() => subscribe(() => force(x => x + 1)), []);
   const stageOpen = getStageState().open;
-  const userBets = user ? getUserBets(user.id) : {};
+  const [userBets, setUserBets] = useState<Record<string, Bet>>({});
+
+  useEffect(() => {
+    if (!user) return;
+
+    getUserBets(user.id).then((bets) => {
+      setUserBets(bets);
+    });
+  }, [user]);
   const [activeGroup, setActiveGroup] = useState<Group | "ALL">("ALL");
 
   const matchesByGroup = useMemo(() => {
@@ -66,13 +74,28 @@ function BetsPage() {
               </div>
             </header>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              {(matchesByGroup[g] || []).sort((a,b) => a.dateBR.localeCompare(b.dateBR)).map(m => (
+              {(matchesByGroup[g] || []).sort((a, b) => a.dateBR.localeCompare(b.dateBR)).map(m => (
                 <MatchCard
                   key={m.id}
                   match={m}
                   bet={userBets[m.id]}
                   disabled={!groupOpen}
-                  onSave={(h, a) => saveBet(user.id, m.id, h, a)}
+                  onSave={async (h, a) => {
+                    const bet = {
+                      userId: user.id,
+                      matchId: m.id,
+                      homeScore: h,
+                      awayScore: a,
+                      updatedAt: new Date().toISOString(),
+                    };
+
+                    await saveBet(bet);
+
+                    setUserBets((prev) => ({
+                      ...prev,
+                      [m.id]: bet,
+                    }));
+                  }}
                 />
               ))}
             </div>

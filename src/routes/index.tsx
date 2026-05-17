@@ -90,7 +90,7 @@ function AuthPage() {
             </form>
           </div>
           <p className="mt-4 text-center text-xs text-muted-foreground">
-            Seus dados ficam armazenados no seu navegador.
+             Seus dados ficam armazenados com segurança no Supabase.
           </p>
         </section>
       </div>

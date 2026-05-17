@@ -1,5 +1,4 @@
-// Front-end only store using localStorage.
-// Simple SHA-256 password hashing (browser-side; obviously not real security — front-end only requirement).
+import { supabase } from "@/lib/supabase";
 
 const ADMIN_EMAIL = "cavalheiro.dev@gmail.com";
 
@@ -7,7 +6,6 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  passwordHash: string;
   isAdmin: boolean;
   createdAt: string;
 }
@@ -21,133 +19,343 @@ export interface Bet {
 }
 
 export interface StageState {
-  open: Record<string, boolean>; // stageId -> open for betting
+  open: Record<string, boolean>;
 }
 
-const K_USERS = "bolao:users";
-const K_BETS = "bolao:bets";
-const K_SESSION = "bolao:session";
-const K_STAGES = "bolao:stages";
+let sessionUser: User | null = null;
 
-function read<T>(k: string, fallback: T): T {
-  if (typeof window === "undefined") return fallback;
-  try { const v = localStorage.getItem(k); return v ? JSON.parse(v) as T : fallback; }
-  catch { return fallback; }
-}
-function write<T>(k: string, v: T) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(k, JSON.stringify(v));
-  window.dispatchEvent(new CustomEvent("bolao:change", { detail: k }));
-}
+function toAppUser(user: any): User {
+  const email = user.email ?? "";
 
-export async function hashPassword(p: string): Promise<string> {
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(p));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
-}
-
-export function getUsers(): User[] { return read<User[]>(K_USERS, []); }
-export function setUsers(u: User[]) { write(K_USERS, u); }
-
-export async function registerUser(name: string, email: string, password: string): Promise<User> {
-  const users = getUsers();
-  const emailLc = email.trim().toLowerCase();
-  if (users.some(u => u.email === emailLc)) throw new Error("E-mail já cadastrado");
-  const user: User = {
-    id: crypto.randomUUID(),
-    name: name.trim(),
-    email: emailLc,
-    passwordHash: await hashPassword(password),
-    isAdmin: emailLc === ADMIN_EMAIL,
-    createdAt: new Date().toISOString(),
+  return {
+    id: user.id,
+    name: user.user_metadata?.name ?? user.user_metadata?.username ?? email,
+    email,
+    isAdmin: email.toLowerCase() === ADMIN_EMAIL,
+    createdAt: user.created_at,
   };
-  setUsers([...users, user]);
-  setSession(user.id);
-  return user;
 }
 
-export async function loginUser(email: string, password: string): Promise<User> {
-  const users = getUsers();
+function notify() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("bolao:change"));
+  }
+}
+
+export async function registerUser(
+  name: string,
+  email: string,
+  password: string
+): Promise<User> {
   const emailLc = email.trim().toLowerCase();
-  const hash = await hashPassword(password);
-  const user = users.find(u => u.email === emailLc && u.passwordHash === hash);
-  if (!user) throw new Error("E-mail ou senha incorretos");
-  setSession(user.id);
-  return user;
+
+  const { data, error } = await supabase.auth.signUp({
+    email: emailLc,
+    password,
+    options: {
+      emailRedirectTo: window.location.origin,
+      data: {
+        name: name.trim(),
+      },
+    },
+  });
+
+  if (error) throw new Error(error.message);
+  if (!data.user) throw new Error("Erro ao criar usuário");
+
+  sessionUser = toAppUser(data.user);
+
+  await upsertCurrentProfile(sessionUser);
+
+  notify();
+
+  return sessionUser;
 }
 
-export function setSession(userId: string | null) {
-  if (typeof window === "undefined") return;
-  if (userId) localStorage.setItem(K_SESSION, userId); else localStorage.removeItem(K_SESSION);
-  window.dispatchEvent(new CustomEvent("bolao:change", { detail: K_SESSION }));
+export async function loginUser(
+  email: string,
+  password: string
+): Promise<User> {
+  const emailLc = email.trim().toLowerCase();
+
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: emailLc,
+    password,
+  });
+
+  if (error) throw new Error("E-mail ou senha incorretos");
+  if (!data.user) throw new Error("Erro ao fazer login");
+
+  sessionUser = toAppUser(data.user);
+
+  await upsertCurrentProfile(sessionUser);
+
+  notify();
+
+  return sessionUser;
 }
+
+export async function logoutUser() {
+  sessionUser = null;
+
+  try {
+    await supabase.auth.signOut();
+  } catch (error) {
+    console.error("Erro no Supabase signOut:", error);
+  }
+
+  if (typeof window !== "undefined") {
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith("sb-")) {
+        localStorage.removeItem(key);
+      }
+    });
+  }
+
+  notify();
+}
+
+export async function loadCurrentUser(): Promise<User | null> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  sessionUser = user ? toAppUser(user) : null;
+
+  if (sessionUser) {
+    await upsertCurrentProfile(sessionUser);
+  }
+
+  return sessionUser;
+}
+
 export function currentUser(): User | null {
-  if (typeof window === "undefined") return null;
-  const id = localStorage.getItem(K_SESSION);
-  if (!id) return null;
-  return getUsers().find(u => u.id === id) ?? null;
-}
-
-export function deleteUser(userId: string) {
-  setUsers(getUsers().filter(u => u.id !== userId));
-  setBets(getBets().filter(b => b.userId !== userId));
-}
-
-export function getBets(): Bet[] { return read<Bet[]>(K_BETS, []); }
-export function setBets(b: Bet[]) { write(K_BETS, b); }
-export function getUserBets(userId: string): Record<string, Bet> {
-  const map: Record<string, Bet> = {};
-  for (const b of getBets()) if (b.userId === userId) map[b.matchId] = b;
-  return map;
-}
-export function saveBet(userId: string, matchId: string, homeScore: number, awayScore: number) {
-  const bets = getBets().filter(b => !(b.userId === userId && b.matchId === matchId));
-  bets.push({ userId, matchId, homeScore, awayScore, updatedAt: new Date().toISOString() });
-  setBets(bets);
-}
-
-export function getStageState(): StageState {
-  return read<StageState>(K_STAGES, { open: { group: true } });
-}
-export function setStageOpen(stageId: string, open: boolean) {
-  const s = getStageState();
-  s.open[stageId] = open;
-  write(K_STAGES, s);
+  return sessionUser;
 }
 
 export function subscribe(cb: () => void): () => void {
   if (typeof window === "undefined") return () => {};
+
   const handler = () => cb();
+
   window.addEventListener("bolao:change", handler);
-  window.addEventListener("storage", handler);
+
+  const { data } = supabase.auth.onAuthStateChange(async () => {
+    await loadCurrentUser();
+    cb();
+  });
+
   return () => {
     window.removeEventListener("bolao:change", handler);
-    window.removeEventListener("storage", handler);
+    data.subscription.unsubscribe();
   };
 }
 
-export function exportBetsCSV(): string {
-  const users = getUsers();
-  const bets = getBets();
-  const rows = [["user_id","user_name","user_email","match_id","home_score","away_score","updated_at"]];
-  for (const b of bets) {
-    const u = users.find(x => x.id === b.userId);
-    rows.push([b.userId, u?.name ?? "", u?.email ?? "", b.matchId, String(b.homeScore), String(b.awayScore), b.updatedAt]);
+async function upsertCurrentProfile(user: User) {
+  const { error } = await supabase.from("profiles").upsert(
+    {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      is_admin: user.isAdmin,
+      created_at: user.createdAt,
+    },
+    {
+      onConflict: "id",
+    }
+  );
+
+  if (error) {
+    console.warn("Could not upsert profile:", error.message);
   }
-  return rows.map(r => r.map(c => /[",\n]/.test(c) ? `"${c.replace(/"/g,'""')}"` : c).join(",")).join("\n");
 }
 
-export function exportUserBetsCSV(userId: string): string {
-  const u = getUsers().find(x => x.id === userId);
-  const bets = getBets().filter(b => b.userId === userId);
-  const rows = [["user_id","user_name","user_email","match_id","home_score","away_score","updated_at"]];
-  for (const b of bets) rows.push([b.userId, u?.name ?? "", u?.email ?? "", b.matchId, String(b.homeScore), String(b.awayScore), b.updatedAt]);
-  return rows.map(r => r.map(c => /[",\n]/.test(c) ? `"${c.replace(/"/g,'""')}"` : c).join(",")).join("\n");
+const STAGE_KEY = "bolao_stage_state";
+
+export function getStageState(): StageState {
+  const raw = localStorage.getItem(STAGE_KEY);
+
+  if (!raw) {
+    return {
+      open: {
+        groups: true,
+        round16: false,
+        quarterfinals: false,
+        semifinals: false,
+        final: false,
+      },
+    };
+  }
+
+  return JSON.parse(raw);
 }
 
-export function downloadCSV(filename: string, content: string) {
-  const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
+export function setStageState(stageState: StageState) {
+  localStorage.setItem(STAGE_KEY, JSON.stringify(stageState));
+  notify();
+}
+
+export function setStageOpen(stageId: string, open: boolean) {
+  const current = getStageState();
+
+  const next = {
+    ...current,
+    open: {
+      ...current.open,
+      [stageId]: open,
+    },
+  };
+
+  setStageState(next);
+}
+
+export async function saveBet(bet: Bet) {
+  const { error } = await supabase.from("predictions").upsert(
+    {
+      user_id: bet.userId,
+      match_id: bet.matchId,
+      home_score: bet.homeScore,
+      away_score: bet.awayScore,
+      updated_at: bet.updatedAt,
+    },
+    {
+      onConflict: "user_id,match_id",
+    }
+  );
+
+  if (error) throw error;
+
+  notify();
+}
+
+export async function getUserBets(
+  userId: string
+): Promise<Record<string, Bet>> {
+  const { data, error } = await supabase
+    .from("predictions")
+    .select("*")
+    .eq("user_id", userId);
+
+  if (error) throw error;
+
+  return Object.fromEntries(
+    (data ?? []).map((b) => [
+      b.match_id,
+      {
+        userId: b.user_id,
+        matchId: b.match_id,
+        homeScore: b.home_score,
+        awayScore: b.away_score,
+        updatedAt: b.updated_at,
+      },
+    ])
+  );
+}
+
+export async function getUserBet(
+  userId: string,
+  matchId: string
+): Promise<Bet | null> {
+  const { data, error } = await supabase
+    .from("predictions")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("match_id", matchId)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+
+  return {
+    userId: data.user_id,
+    matchId: data.match_id,
+    homeScore: data.home_score,
+    awayScore: data.away_score,
+    updatedAt: data.updated_at,
+  };
+}
+
+export async function getBets(): Promise<Bet[]> {
+  const { data, error } = await supabase
+    .from("predictions")
+    .select("*")
+    .order("updated_at", { ascending: true });
+
+  if (error) throw error;
+
+  return (data ?? []).map((b) => ({
+    userId: b.user_id,
+    matchId: b.match_id,
+    homeScore: b.home_score,
+    awayScore: b.away_score,
+    updatedAt: b.updated_at,
+  }));
+}
+
+export async function getUsers(): Promise<User[]> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+
+  return (data ?? []).map((u) => ({
+    id: u.id,
+    name: u.name ?? u.email,
+    email: u.email,
+    isAdmin: u.is_admin,
+    createdAt: u.created_at,
+  }));
+}
+
+export function betsToCSV(bets: Bet[], users: User[]) {
+  const header = [
+    "user_id",
+    "user_name",
+    "email",
+    "match_id",
+    "home_score",
+    "away_score",
+    "updated_at",
+  ];
+
+  const rows = bets.map((b) => {
+    const user = users.find((u) => u.id === b.userId);
+
+    return [
+      b.userId,
+      user?.name ?? "",
+      user?.email ?? "",
+      b.matchId,
+      b.homeScore,
+      b.awayScore,
+      b.updatedAt,
+    ];
+  });
+
+  return [header, ...rows]
+    .map((row) =>
+      row.map((value) => `"${String(value ?? "").replace(/"/g, '""')}"`).join(",")
+    )
+    .join("\n");
+}
+
+export function downloadCSV(filename: string, csv: string) {
+  const blob = new Blob([csv], {
+    type: "text/csv;charset=utf-8;",
+  });
+
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = filename; a.click();
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = filename;
+  link.click();
+
   URL.revokeObjectURL(url);
+}
+
+export function clearBets() {
+  console.warn("clearBets is disabled because bets are stored in Supabase.");
 }
