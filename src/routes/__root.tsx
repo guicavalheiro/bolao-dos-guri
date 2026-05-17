@@ -72,14 +72,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "Bolão Dos Guris" },
+      { name: "description", content: "Bolão Winner is a web application for managing football pool bets for tournaments." },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "Bolão Dos Guris" },
+      { property: "og:description", content: "Bolão Winner is a web application for managing football pool bets for tournaments." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "Bolão Dos Guris" },
+      { name: "twitter:description", content: "Bolão Winner is a web application for managing football pool bets for tournaments." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/d9d62320-86b8-4ce7-a687-7311b8509310/id-preview-62281620--c1479bbf-3020-4175-be0c-309d0de14006.lovable.app-1778976834314.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/d9d62320-86b8-4ce7-a687-7311b8509310/id-preview-62281620--c1479bbf-3020-4175-be0c-309d0de14006.lovable.app-1778976834314.png" },
     ],
     links: [
       {
