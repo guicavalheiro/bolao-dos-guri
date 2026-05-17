@@ -88,7 +88,10 @@ export async function loginUser(
 
   sessionUser = toAppUser(data.user);
 
-  await upsertCurrentProfile(sessionUser);
+  // Não trava o login se o profile der problema
+  upsertCurrentProfile(sessionUser).catch((err) => {
+    console.warn("Could not upsert profile after login:", err);
+  });
 
   notify();
 
@@ -123,7 +126,9 @@ export async function loadCurrentUser(): Promise<User | null> {
   sessionUser = user ? toAppUser(user) : null;
 
   if (sessionUser) {
-    await upsertCurrentProfile(sessionUser);
+    upsertCurrentProfile(sessionUser).catch((err) => {
+      console.warn("Could not upsert profile on load:", err);
+    });
   }
 
   return sessionUser;
@@ -140,8 +145,9 @@ export function subscribe(cb: () => void): () => void {
 
   window.addEventListener("bolao:change", handler);
 
-  const { data } = supabase.auth.onAuthStateChange(async () => {
-    await loadCurrentUser();
+  const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+    sessionUser = session?.user ? toAppUser(session.user) : null;
+
     cb();
   });
 
@@ -210,20 +216,31 @@ export function setStageOpen(stageId: string, open: boolean) {
 }
 
 export async function saveBet(bet: Bet) {
-  const { error } = await supabase.from("predictions").upsert(
-    {
-      user_id: bet.userId,
-      match_id: bet.matchId,
-      home_score: bet.homeScore,
-      away_score: bet.awayScore,
-      updated_at: bet.updatedAt,
-    },
-    {
-      onConflict: "user_id,match_id",
-    }
-  );
+  console.log("Entrou no saveBet:", bet);
 
-  if (error) throw error;
+  const { error } = await supabase
+    .from("predictions")
+    .upsert(
+      {
+        user_id: bet.userId,
+        match_id: bet.matchId,
+        home_score: bet.homeScore,
+        away_score: bet.awayScore,
+        updated_at: bet.updatedAt,
+      },
+      {
+        onConflict: "user_id,match_id",
+      }
+    );
+
+  console.log("Resposta Supabase saveBet:", {
+    error,
+  });
+
+  if (error) {
+    console.error("Erro Supabase saveBet:", error);
+    throw error;
+  }
 
   notify();
 }
@@ -358,4 +375,52 @@ export function downloadCSV(filename: string, csv: string) {
 
 export function clearBets() {
   console.warn("clearBets is disabled because bets are stored in Supabase.");
+}
+
+export interface SpecialPrediction {
+  userId: string;
+  category: string;
+  prediction: string;
+  updatedAt: string;
+}
+
+export async function saveSpecialPrediction(item: SpecialPrediction) {
+  const { error } = await supabase.from("special_predictions").upsert(
+    {
+      user_id: item.userId,
+      category: item.category,
+      prediction: item.prediction,
+      updated_at: item.updatedAt,
+    },
+    {
+      onConflict: "user_id,category",
+    }
+  );
+
+  if (error) throw error;
+
+  notify();
+}
+
+export async function getUserSpecialPredictions(
+  userId: string
+): Promise<Record<string, SpecialPrediction>> {
+  const { data, error } = await supabase
+    .from("special_predictions")
+    .select("*")
+    .eq("user_id", userId);
+
+  if (error) throw error;
+
+  return Object.fromEntries(
+    (data ?? []).map((item) => [
+      item.category,
+      {
+        userId: item.user_id,
+        category: item.category,
+        prediction: item.prediction,
+        updatedAt: item.updated_at,
+      },
+    ])
+  );
 }
