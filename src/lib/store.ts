@@ -615,3 +615,22 @@ export async function getUserJoinRequests(userId: string) {
 
   return data ?? [];
 }
+
+export async function getGroupById(groupId: string): Promise<Group | null> {
+  const { data, error } = await supabase
+    .from("groups")
+    .select("*")
+    .eq("id", groupId)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+
+  return {
+    id: data.id,
+    name: data.name,
+    description: data.description,
+    ownerId: data.owner_id,
+    createdAt: data.created_at,
+  };
+}

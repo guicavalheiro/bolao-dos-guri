@@ -1,4 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Link,
+  Outlet,
+  useRouterState,
+} from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useSession } from "@/hooks/use-session";
 import {
@@ -19,6 +24,12 @@ export const Route = createFileRoute("/_auth/groups")({
 
 function GroupsPage() {
   const { user } = useSession();
+  const pathname = useRouterState(
+    {select: (state) => state.location.pathname,});
+
+    if (pathname !== "/groups") {
+      return <Outlet />;
+    }
 
   const [groups, setGroups] = useState<Group[]>([]);
   const [myGroups, setMyGroups] = useState<any[]>([]);
@@ -117,6 +128,8 @@ function GroupsPage() {
                 description={item.groups.description}
                 badge={item.role === "owner" ? "Dono" : "Participante"}
                 actionLabel="Abrir grupo"
+                to="/groups/$groupId"
+                params={{ groupId: item.groups.id }}
               />
             ))}
           </div>
@@ -235,6 +248,8 @@ function GroupCard({
   actionLabel,
   onAction,
   disabled = false,
+  to,
+  params,
 }: {
   name: string;
   description?: string;
@@ -242,6 +257,8 @@ function GroupCard({
   actionLabel: string;
   onAction?: () => void;
   disabled?: boolean;
+  to?: "/groups/$groupId";
+  params?: { groupId: string };
 }) {
   return (
     <article className="rounded-2xl border border-border bg-card p-5 transition hover:border-primary/40">
@@ -256,8 +273,8 @@ function GroupCard({
 
         <span
           className={`rounded-full px-3 py-1 text-xs font-medium ${disabled
-            ? "bg-muted text-muted-foreground"
-            : "bg-primary/15 text-primary"
+              ? "bg-muted text-muted-foreground"
+              : "bg-primary/15 text-primary"
             }`}
         >
           {badge}
@@ -265,16 +282,28 @@ function GroupCard({
       </div>
 
       <div className="mt-5 flex items-center justify-between border-t border-border pt-4">
-        <span className="text-xs text-muted-foreground">Ranking em breve</span>
+        <span className="text-xs text-muted-foreground">
+          Ranking em breve
+        </span>
 
-        <button
-          type="button"
-          disabled={!onAction || disabled}
-          onClick={onAction}
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:opacity-70"
-        >
-          {actionLabel}
-        </button>
+        {to && params ? (
+          <Link
+            to="/groups/$groupId"
+            params={{ groupId: params.groupId }}
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+          >
+            {actionLabel}
+          </Link>
+        ) : (
+          <button
+            type="button"
+            disabled={!onAction || disabled}
+            onClick={onAction}
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:opacity-70"
+          >
+            {actionLabel}
+          </button>
+        )}
       </div>
     </article>
   );
