@@ -436,3 +436,201 @@ export async function forgotPassword(
    }
  )
 }
+
+/* ===========================
+   GROUPS
+=========================== */
+
+export interface Group {
+  id: string;
+  name: string;
+  description?: string;
+  ownerId: string;
+  createdAt: string;
+}
+
+export async function createGroup(
+  ownerId: string,
+  name: string,
+  description = ""
+) {
+  const { data, error } = await supabase
+    .from("groups")
+    .insert({
+      owner_id: ownerId,
+      name,
+      description,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  // dono entra automaticamente
+  await supabase.from("group_members").insert({
+    group_id: data.id,
+    user_id: ownerId,
+    role: "owner",
+  });
+
+  notify();
+
+  return data;
+}
+
+export async function getGroups(): Promise<Group[]> {
+  const { data, error } =
+    await supabase
+      .from("groups")
+      .select("*")
+      .order("created_at");
+
+  if (error) throw error;
+
+  return (data ?? []).map(g => ({
+    id: g.id,
+    name: g.name,
+    description: g.description,
+    ownerId: g.owner_id,
+    createdAt: g.created_at,
+  }));
+}
+
+export async function getUserGroups(
+  userId: string
+) {
+  const { data, error } =
+    await supabase
+      .from("group_members")
+      .select(`
+        role,
+        groups(*)
+      `)
+      .eq("user_id", userId);
+
+  if (error) throw error;
+
+  return data;
+}
+
+export async function requestJoinGroup(
+  groupId: string,
+  userId: string
+) {
+  const { error } =
+    await supabase
+      .from("group_join_requests")
+      .insert({
+        group_id: groupId,
+        user_id: userId,
+      });
+
+  if (error) throw error;
+
+  notify();
+}
+
+export async function getPendingRequestsForOwner(ownerId: string) {
+  const { data: ownerGroups, error: groupsError } = await supabase
+    .from("groups")
+    .select("id,name")
+    .eq("owner_id", ownerId);
+
+  if (groupsError) throw groupsError;
+
+  const groupIds = (ownerGroups ?? []).map((group) => group.id);
+
+  if (groupIds.length === 0) return [];
+
+  const { data: requests, error: requestsError } = await supabase
+    .from("group_join_requests")
+    .select("*")
+    .in("group_id", groupIds)
+    .eq("status", "pending");
+
+  if (requestsError) throw requestsError;
+
+  const userIds = [...new Set((requests ?? []).map((req) => req.user_id))];
+
+  const { data: profiles, error: profilesError } = await supabase
+    .from("profiles")
+    .select("id,name,email")
+    .in("id", userIds);
+
+  if (profilesError) throw profilesError;
+
+  return (requests ?? []).map((req) => ({
+    ...req,
+    profile: profiles?.find((profile) => profile.id === req.user_id),
+    group: ownerGroups?.find((group) => group.id === req.group_id),
+  }));
+}
+export async function approveJoinRequest(
+  requestId:number,
+  groupId:string,
+  userId:string
+){
+  const { error } =
+    await supabase
+      .from("group_members")
+      .insert({
+        group_id: groupId,
+        user_id: userId,
+        role:"member"
+      });
+
+  if(error) throw error;
+
+  await supabase
+    .from("group_join_requests")
+    .update({
+      status:"approved"
+    })
+    .eq("id",requestId);
+
+  notify();
+}
+
+export async function rejectJoinRequest(
+ requestId:number
+){
+ await supabase
+   .from("group_join_requests")
+   .update({
+     status:"rejected"
+   })
+   .eq("id",requestId);
+
+ notify();
+}
+
+export async function getUserJoinRequests(userId: string) {
+  const { data, error } = await supabase
+    .from("group_join_requests")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("status", "pending");
+
+  if (error) throw error;
+
+  return data ?? [];
+}
+
+export async function getGroupById(groupId: string): Promise<Group | null> {
+  const { data, error } = await supabase
+    .from("groups")
+    .select("*")
+    .eq("id", groupId)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+
+  return {
+    id: data.id,
+    name: data.name,
+    description: data.description,
+    ownerId: data.owner_id,
+    createdAt: data.created_at,
+  };
+}

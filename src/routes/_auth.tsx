@@ -51,6 +51,17 @@ function AuthLayout() {
               Apostas
             </Link>
 
+            <Link
+              to="/groups"
+              className="rounded-md px-3 py-1.5 hover:bg-muted"
+              activeProps={{
+                className:
+                  "rounded-md px-3 py-1.5 bg-muted"
+              }}
+            >
+              Grupos
+            </Link>
+
             {user.isAdmin && (
               <Link
                 to="/admin"

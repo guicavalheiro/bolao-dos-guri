@@ -12,8 +12,10 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthGroupsRouteImport } from './routes/_auth/groups'
 import { Route as AuthApostasRouteImport } from './routes/_auth/apostas'
 import { Route as AuthAdminRouteImport } from './routes/_auth/admin'
+import { Route as AuthGroupsGroupIdRouteImport } from './routes/_auth/groups.$groupId'
 
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
@@ -29,6 +31,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthGroupsRoute = AuthGroupsRouteImport.update({
+  id: '/groups',
+  path: '/groups',
+  getParentRoute: () => AuthRoute,
+} as any)
 const AuthApostasRoute = AuthApostasRouteImport.update({
   id: '/apostas',
   path: '/apostas',
@@ -39,18 +46,27 @@ const AuthAdminRoute = AuthAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthRoute,
 } as any)
+const AuthGroupsGroupIdRoute = AuthGroupsGroupIdRouteImport.update({
+  id: '/$groupId',
+  path: '/$groupId',
+  getParentRoute: () => AuthGroupsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/reset-password': typeof ResetPasswordRoute
   '/admin': typeof AuthAdminRoute
   '/apostas': typeof AuthApostasRoute
+  '/groups': typeof AuthGroupsRouteWithChildren
+  '/groups/$groupId': typeof AuthGroupsGroupIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/reset-password': typeof ResetPasswordRoute
   '/admin': typeof AuthAdminRoute
   '/apostas': typeof AuthApostasRoute
+  '/groups': typeof AuthGroupsRouteWithChildren
+  '/groups/$groupId': typeof AuthGroupsGroupIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -59,12 +75,26 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/_auth/admin': typeof AuthAdminRoute
   '/_auth/apostas': typeof AuthApostasRoute
+  '/_auth/groups': typeof AuthGroupsRouteWithChildren
+  '/_auth/groups/$groupId': typeof AuthGroupsGroupIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/reset-password' | '/admin' | '/apostas'
+  fullPaths:
+    | '/'
+    | '/reset-password'
+    | '/admin'
+    | '/apostas'
+    | '/groups'
+    | '/groups/$groupId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/reset-password' | '/admin' | '/apostas'
+  to:
+    | '/'
+    | '/reset-password'
+    | '/admin'
+    | '/apostas'
+    | '/groups'
+    | '/groups/$groupId'
   id:
     | '__root__'
     | '/'
@@ -72,6 +102,8 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/_auth/admin'
     | '/_auth/apostas'
+    | '/_auth/groups'
+    | '/_auth/groups/$groupId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -103,6 +135,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_auth/groups': {
+      id: '/_auth/groups'
+      path: '/groups'
+      fullPath: '/groups'
+      preLoaderRoute: typeof AuthGroupsRouteImport
+      parentRoute: typeof AuthRoute
+    }
     '/_auth/apostas': {
       id: '/_auth/apostas'
       path: '/apostas'
@@ -117,17 +156,38 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthAdminRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_auth/groups/$groupId': {
+      id: '/_auth/groups/$groupId'
+      path: '/$groupId'
+      fullPath: '/groups/$groupId'
+      preLoaderRoute: typeof AuthGroupsGroupIdRouteImport
+      parentRoute: typeof AuthGroupsRoute
+    }
   }
 }
+
+interface AuthGroupsRouteChildren {
+  AuthGroupsGroupIdRoute: typeof AuthGroupsGroupIdRoute
+}
+
+const AuthGroupsRouteChildren: AuthGroupsRouteChildren = {
+  AuthGroupsGroupIdRoute: AuthGroupsGroupIdRoute,
+}
+
+const AuthGroupsRouteWithChildren = AuthGroupsRoute._addFileChildren(
+  AuthGroupsRouteChildren,
+)
 
 interface AuthRouteChildren {
   AuthAdminRoute: typeof AuthAdminRoute
   AuthApostasRoute: typeof AuthApostasRoute
+  AuthGroupsRoute: typeof AuthGroupsRouteWithChildren
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
   AuthAdminRoute: AuthAdminRoute,
   AuthApostasRoute: AuthApostasRoute,
+  AuthGroupsRoute: AuthGroupsRouteWithChildren,
 }
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
