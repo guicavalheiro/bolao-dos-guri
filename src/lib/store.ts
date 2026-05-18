@@ -530,25 +530,41 @@ export async function requestJoinGroup(
   notify();
 }
 
-export async function getPendingRequestsForOwner(
-  ownerId: string
-) {
-  const { data, error } =
-    await supabase
-      .from("group_join_requests")
-      .select(`
-        *,
-        profiles(name,email),
-        groups!inner(owner_id)
-      `)
-      .eq("groups.owner_id", ownerId)
-      .eq("status","pending");
+export async function getPendingRequestsForOwner(ownerId: string) {
+  const { data: ownerGroups, error: groupsError } = await supabase
+    .from("groups")
+    .select("id,name")
+    .eq("owner_id", ownerId);
 
-  if (error) throw error;
+  if (groupsError) throw groupsError;
 
-  return data;
+  const groupIds = (ownerGroups ?? []).map((group) => group.id);
+
+  if (groupIds.length === 0) return [];
+
+  const { data: requests, error: requestsError } = await supabase
+    .from("group_join_requests")
+    .select("*")
+    .in("group_id", groupIds)
+    .eq("status", "pending");
+
+  if (requestsError) throw requestsError;
+
+  const userIds = [...new Set((requests ?? []).map((req) => req.user_id))];
+
+  const { data: profiles, error: profilesError } = await supabase
+    .from("profiles")
+    .select("id,name,email")
+    .in("id", userIds);
+
+  if (profilesError) throw profilesError;
+
+  return (requests ?? []).map((req) => ({
+    ...req,
+    profile: profiles?.find((profile) => profile.id === req.user_id),
+    group: ownerGroups?.find((group) => group.id === req.group_id),
+  }));
 }
-
 export async function approveJoinRequest(
   requestId:number,
   groupId:string,

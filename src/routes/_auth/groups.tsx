@@ -7,6 +7,9 @@ import {
   getUserGroups,
   requestJoinGroup,
   getUserJoinRequests,
+  getPendingRequestsForOwner,
+  approveJoinRequest,
+  rejectJoinRequest,
   type Group,
 } from "@/lib/store";
 
@@ -22,6 +25,7 @@ function GroupsPage() {
   const [joinRequests, setJoinRequests] = useState<any[]>([]);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
 
   async function refresh() {
     if (!user) return;
@@ -29,6 +33,7 @@ function GroupsPage() {
     setGroups(await getGroups());
     setMyGroups(await getUserGroups(user.id));
     setJoinRequests(await getUserJoinRequests(user.id));
+    setPendingRequests(await getPendingRequestsForOwner(user.id));
   }
 
   useEffect(() => {
@@ -117,7 +122,68 @@ function GroupsPage() {
           </div>
         )}
       </section>
+      <section>
+        <div className="mb-4">
+          <h2 className="font-display text-3xl">Solicitações pendentes</h2>
+          <p className="text-sm text-muted-foreground">
+            Aprove ou recuse pedidos para entrar nos seus grupos.
+          </p>
+        </div>
 
+        {pendingRequests.length === 0 ? (
+          <div className="rounded-2xl border border-border bg-card/50 p-6 text-sm text-muted-foreground">
+            Nenhuma solicitação pendente.
+          </div>
+        ) : (
+          <div className="grid gap-4">
+            {pendingRequests.map((req: any) => (
+              <div
+                key={req.id}
+                className="rounded-2xl border border-border bg-card p-5"
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <h3 className="text-lg font-semibold">
+                      {req.profile?.name || "Usuário"}
+                    </h3>
+
+                    <p className="text-sm text-muted-foreground">
+                      {req.profile?.email}
+                    </p>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={async () => {
+                        await approveJoinRequest(
+                          req.id,
+                          req.group_id,
+                          req.user_id
+                        );
+
+                        refresh();
+                      }}
+                      className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+                    >
+                      Aprovar
+                    </button>
+
+                    <button
+                      onClick={async () => {
+                        await rejectJoinRequest(req.id);
+                        refresh();
+                      }}
+                      className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition hover:bg-muted"
+                    >
+                      Recusar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
       <section>
         <div className="mb-4">
           <h2 className="font-display text-3xl">Explorar grupos</h2>
@@ -189,11 +255,10 @@ function GroupCard({
         </div>
 
         <span
-          className={`rounded-full px-3 py-1 text-xs font-medium ${
-            disabled
-              ? "bg-muted text-muted-foreground"
-              : "bg-primary/15 text-primary"
-          }`}
+          className={`rounded-full px-3 py-1 text-xs font-medium ${disabled
+            ? "bg-muted text-muted-foreground"
+            : "bg-primary/15 text-primary"
+            }`}
         >
           {badge}
         </span>
