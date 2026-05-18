@@ -424,3 +424,15 @@ export async function getUserSpecialPredictions(
     ])
   );
 }
+
+export async function forgotPassword(
+ email:string
+){
+ return supabase.auth.resetPasswordForEmail(
+   email,
+   {
+     redirectTo:
+       `${window.location.origin}/reset-password`
+   }
+ )
+}

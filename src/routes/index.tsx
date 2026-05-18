@@ -1,8 +1,8 @@
 import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { loginUser, registerUser } from "@/lib/store";
+import { forgotPassword, loginUser, registerUser } from "@/lib/store";
 import { useSession } from "@/hooks/use-session";
-import logo from "@/assets/wc2026-logo.png";
+import logo from "@/assets/2026-FIFA-Logo.png";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -17,14 +17,18 @@ export const Route = createFileRoute("/")({
   component: AuthPage,
 });
 
+type AuthMode = "login" | "register" | "forgot";
+
 function AuthPage() {
   const { user, ready } = useSession();
 
-  const [mode, setMode] = useState<"login" | "register">("login");
+  const [mode, setMode] = useState<AuthMode>("login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
   if (ready && user) {
@@ -35,9 +39,21 @@ function AuthPage() {
     e.preventDefault();
 
     setError("");
+    setSuccess("");
     setLoading(true);
 
     try {
+      if (mode === "forgot") {
+        if (!email.trim()) {
+          throw new Error("Informe seu e-mail");
+        }
+
+        await forgotPassword(email);
+
+        setSuccess("Enviamos um link de recuperação para o seu e-mail.");
+        return;
+      }
+
       if (mode === "register") {
         if (name.trim().length < 2) {
           throw new Error("Informe seu nome");
@@ -48,9 +64,10 @@ function AuthPage() {
         }
 
         await registerUser(name, email, password);
-      } else {
-        await loginUser(email, password);
+        return;
       }
+
+      await loginUser(email, password);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro");
     } finally {
@@ -72,21 +89,24 @@ function AuthPage() {
       />
 
       <div className="relative mx-auto grid min-h-screen max-w-6xl grid-cols-1 items-center gap-12 px-6 py-12 lg:grid-cols-2">
-        <section className="flex flex-col items-center text-center lg:items-start lg:text-left">
-          <div className="relative">
+        <section className="flex flex-col items-center text-center">
+          <div className="relative mb-8 flex items-center justify-center">
             <div
-              className="absolute -inset-10 rounded-full opacity-40 blur-3xl"
-              style={{ background: "var(--gradient-fifa)" }}
+              className="absolute h-[520px] w-[760px] rounded-full blur-[95px] opacity-90"
+              style={{
+                background:
+                  "radial-gradient(circle at center, rgba(255,255,255,.85) 0%, rgba(255,255,255,.65) 28%, rgba(255,170,40,.55) 42%, rgba(40,210,120,.45) 58%, rgba(0,185,255,.45) 72%, transparent 100%)",
+              }}
             />
 
             <img
               src={logo}
-              alt="FIFA World Cup 2026"
-              className="relative h-72 w-auto drop-shadow-2xl md:h-96"
+              alt="FIFA"
+              className="relative z-10 h-[390px] w-auto object-contain drop-shadow-2xl"
             />
           </div>
 
-          <h1 className="mt-6 text-5xl md:text-7xl font-display">
+          <h1 className="text-5xl font-display md:text-7x2">
             BOLÃO{" "}
             <span
               style={{
@@ -99,9 +119,10 @@ function AuthPage() {
             </span>
           </h1>
 
-          <p className="mt-3 max-w-md text-muted-foreground">
-            Aposte com seus amigos em cada jogo da Copa do Mundo FIFA 2026 —
-            México · EUA · Canadá.
+          <p className="mt-6 max-w-2xl text-lg text-muted-foreground">
+            Aposte com seus amigos em cada jogo da Copa do Mundo
+            <br />
+            FIFA 2026 — México · EUA · Canadá.
           </p>
         </section>
 
@@ -111,11 +132,10 @@ function AuthPage() {
               <button
                 type="button"
                 onClick={() => setMode("login")}
-                className={`flex-1 rounded-md py-2 text-sm font-medium transition ${
-                  mode === "login"
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground"
-                }`}
+                className={`flex-1 rounded-md py-2 text-sm font-medium transition ${mode === "login"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground"
+                  }`}
               >
                 Entrar
               </button>
@@ -123,11 +143,10 @@ function AuthPage() {
               <button
                 type="button"
                 onClick={() => setMode("register")}
-                className={`flex-1 rounded-md py-2 text-sm font-medium transition ${
-                  mode === "register"
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground"
-                }`}
+                className={`flex-1 rounded-md py-2 text-sm font-medium transition ${mode === "register"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground"
+                  }`}
               >
                 Cadastrar
               </button>
@@ -157,20 +176,28 @@ function AuthPage() {
                 />
               </Field>
 
-              <Field label="Senha">
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="input"
-                  placeholder="••••••"
-                />
-              </Field>
+              {mode !== "forgot" && (
+                <Field label="Senha">
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="input"
+                    placeholder="••••••"
+                  />
+                </Field>
+              )}
 
               {error && (
                 <p className="rounded-md bg-destructive/15 px-3 py-2 text-sm text-destructive">
                   {error}
+                </p>
+              )}
+
+              {success && (
+                <p className="rounded-md bg-primary/15 px-3 py-2 text-sm text-primary">
+                  {success}
                 </p>
               )}
 
@@ -186,9 +213,31 @@ function AuthPage() {
                   ? "Aguarde..."
                   : mode === "login"
                     ? "Entrar no bolão"
-                    : "Criar conta"}
+                    : mode === "register"
+                      ? "Criar conta"
+                      : "Enviar link de recuperação"}
               </button>
             </form>
+
+            <div className="mt-4 text-center">
+              {mode === "forgot" ? (
+                <button
+                  type="button"
+                  onClick={() => setMode("login")}
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                >
+                  Voltar para login
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setMode("forgot")}
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                >
+                  Esqueci minha senha
+                </button>
+              )}
+            </div>
           </div>
 
           <p className="mt-4 text-center text-xs text-muted-foreground">
