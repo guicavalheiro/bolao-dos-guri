@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import {
     getGroupById,
     getGroupMembers,
+    getGroupRanking,
     type Group,
 } from "@/lib/store";
 
@@ -20,6 +21,9 @@ function GroupDetailsPage() {
     const [members, setMembers] =
         useState<any[]>([]);
 
+    const [ranking, setRanking] =
+        useState<any[]>([]);
+
     useEffect(() => { loadGroup().catch(console.error); }, [groupId]);
 
     async function loadGroup() {
@@ -30,8 +34,12 @@ function GroupDetailsPage() {
         const users =
             await getGroupMembers(groupId);
 
+        const rank =
+            await getGroupRanking(groupId);
+
         setGroup(data);
         setMembers(users);
+        setRanking(rank);
 
     }
 
@@ -140,12 +148,88 @@ function GroupDetailsPage() {
             <section className="rounded-2xl border bg-card p-6">
 
                 <h2 className="text-2xl font-semibold">
-                    Ranking
+                    🏆 Ranking
                 </h2>
 
-                <p className="mt-2 text-muted-foreground">
-                    Em breve
-                </p>
+                <div className="mt-5 space-y-3">
+
+                    {ranking.length === 0 && (
+
+                        <p className="text-muted-foreground">
+                            Ainda sem pontuação
+                        </p>
+
+                    )}
+
+                    {ranking.map(
+                        (member: any, index: number) => (
+
+                            <div
+                                key={member.user_id}
+                                className="
+                                flex items-center
+                                justify-between
+                                rounded-xl
+                                border
+                                p-4
+                                "
+                            >
+
+                                <div className="flex gap-3">
+
+                                    <div className="
+                                    flex h-8 w-8
+                                    items-center
+                                    justify-center
+                                    rounded-full
+                                    bg-primary/10
+                                    text-primary
+                                    ">
+
+                                        {index + 1}º
+
+                                    </div>
+
+                                    <div>
+
+                                        <div className="font-medium">
+
+                                            {member.profile?.name}
+
+                                        </div>
+
+                                        <div className="
+                                        text-sm
+                                        text-muted-foreground
+                                        ">
+
+                                            {member.role === "owner"
+                                                ? "Dono"
+                                                : "Participante"}
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+
+                                <div className="
+                                text-lg
+                                font-semibold
+                                text-primary
+                                ">
+
+                                    {member.points}
+                                    pts
+
+                                </div>
+
+                            </div>
+
+                        ))}
+
+                </div>
 
             </section>
 

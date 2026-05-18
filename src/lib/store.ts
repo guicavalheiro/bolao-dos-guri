@@ -659,3 +659,81 @@ export async function getGroupMembers(groupId: string) {
     profile: profiles?.find((profile) => profile.id === member.user_id),
   }));
 }
+
+export async function getGroupRanking(groupId: string) {
+
+  const members =
+    await getGroupMembers(groupId);
+
+  const userIds =
+    members.map(m => m.user_id);
+
+  const { data: predictions } =
+    await supabase
+      .from("predictions")
+      .select("*")
+      .in("user_id", userIds);
+
+  const { data: results } =
+    await supabase
+      .from("match_results")
+      .select("*");
+
+  const ranking =
+    members.map(member => {
+
+      let points = 0;
+
+      predictions
+        ?.filter(
+          p =>
+            p.user_id === member.user_id
+        )
+        .forEach(pred => {
+
+          const result =
+            results?.find(
+              r =>
+                r.match_id === pred.match_id
+            );
+
+          if (!result) return;
+
+          const exact =
+            pred.home_score === result.home_score &&
+            pred.away_score === result.away_score;
+
+          const winnerPred =
+            Math.sign(
+              pred.home_score -
+              pred.away_score
+            );
+
+          const winnerReal =
+            Math.sign(
+              result.home_score -
+              result.away_score
+            );
+
+          if (exact)
+            points += 5;
+
+          else if (
+            winnerPred === winnerReal
+          )
+            points += 3;
+
+        });
+
+      return {
+        ...member,
+        points
+      };
+
+    });
+
+  return ranking.sort(
+    (a, b) =>
+      b.points - a.points
+  );
+}
