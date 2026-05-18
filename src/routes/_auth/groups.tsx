@@ -1,9 +1,4 @@
-import {
-  createFileRoute,
-  Link,
-  Outlet,
-  useRouterState,
-} from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useSession } from "@/hooks/use-session";
 import {
@@ -24,7 +19,7 @@ export const Route = createFileRoute("/_auth/groups")({
 
 function GroupsPage() {
   const { user } = useSession();
-  const pathname = useRouterState({select: (state) => state.location.pathname,});
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
   const [groups, setGroups] = useState<Group[]>([]);
   const [myGroups, setMyGroups] = useState<any[]>([]);
   const [joinRequests, setJoinRequests] = useState<any[]>([]);
@@ -33,8 +28,8 @@ function GroupsPage() {
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
 
   if (pathname !== "/groups") {
-      return <Outlet />;
-    }
+    return <Outlet />;
+  }
 
   async function refresh() {
     if (!user) return;
@@ -54,9 +49,7 @@ function GroupsPage() {
   const myGroupIds = myGroups.map((g: any) => g.groups.id);
   const requestedGroupIds = joinRequests.map((r: any) => r.group_id);
 
-  const availableGroups = groups.filter(
-    (group) => !myGroupIds.includes(group.id)
-  );
+  const availableGroups = groups.filter((group) => !myGroupIds.includes(group.id));
 
   return (
     <main className="mx-auto max-w-6xl space-y-10 px-4 py-8">
@@ -108,9 +101,7 @@ function GroupsPage() {
       <section>
         <div className="mb-4">
           <h2 className="font-display text-3xl">Meus grupos</h2>
-          <p className="text-sm text-muted-foreground">
-            Grupos em que você já participa.
-          </p>
+          <p className="text-sm text-muted-foreground">Grupos em que você já participa.</p>
         </div>
 
         {myGroups.length === 0 ? (
@@ -148,29 +139,18 @@ function GroupsPage() {
         ) : (
           <div className="grid gap-4">
             {pendingRequests.map((req: any) => (
-              <div
-                key={req.id}
-                className="rounded-2xl border border-border bg-card p-5"
-              >
+              <div key={req.id} className="rounded-2xl border border-border bg-card p-5">
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <h3 className="text-lg font-semibold">
-                      {req.profile?.name || "Usuário"}
-                    </h3>
+                    <h3 className="text-lg font-semibold">{req.profile?.name || "Usuário"}</h3>
 
-                    <p className="text-sm text-muted-foreground">
-                      {req.profile?.email}
-                    </p>
+                    <p className="text-sm text-muted-foreground">{req.profile?.email}</p>
                   </div>
 
                   <div className="flex gap-2">
                     <button
                       onClick={async () => {
-                        await approveJoinRequest(
-                          req.id,
-                          req.group_id,
-                          req.user_id
-                        );
+                        await approveJoinRequest(req.id, req.group_id, req.user_id);
 
                         refresh();
                       }}
@@ -218,9 +198,7 @@ function GroupsPage() {
                   name={group.name}
                   description={group.description}
                   badge={alreadyRequested ? "Solicitado" : "Disponível"}
-                  actionLabel={
-                    alreadyRequested ? "Aguardando aprovação" : "Pedir entrada"
-                  }
+                  actionLabel={alreadyRequested ? "Aguardando aprovação" : "Pedir entrada"}
                   disabled={alreadyRequested}
                   onAction={async () => {
                     if (alreadyRequested) return;
@@ -264,25 +242,20 @@ function GroupCard({
         <div>
           <h3 className="text-xl font-semibold">{name}</h3>
 
-          <p className="mt-1 text-sm text-muted-foreground">
-            {description || "Sem descrição."}
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">{description || "Sem descrição."}</p>
         </div>
 
         <span
-          className={`rounded-full px-3 py-1 text-xs font-medium ${disabled
-              ? "bg-muted text-muted-foreground"
-              : "bg-primary/15 text-primary"
-            }`}
+          className={`rounded-full px-3 py-1 text-xs font-medium ${
+            disabled ? "bg-muted text-muted-foreground" : "bg-primary/15 text-primary"
+          }`}
         >
           {badge}
         </span>
       </div>
 
       <div className="mt-5 flex items-center justify-between border-t border-border pt-4">
-        <span className="text-xs text-muted-foreground">
-          Ranking em breve
-        </span>
+        <span className="text-xs text-muted-foreground">Ranking em breve</span>
 
         {to && params ? (
           <Link

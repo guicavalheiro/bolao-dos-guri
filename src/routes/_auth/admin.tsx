@@ -1,6 +1,7 @@
 import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useSession } from "@/hooks/use-session";
+
 import {
   getUsers,
   getBets,
@@ -9,10 +10,13 @@ import {
   getStageState,
   setStageOpen,
   subscribe,
+  getMatchResults,
+  saveMatchResult,
   type User,
   type Bet,
 } from "@/lib/store";
-import { STAGES } from "@/lib/data/matches";
+
+import { STAGES, MATCHES, TEAMS } from "@/lib/data/matches";
 
 export const Route = createFileRoute("/_auth/admin")({
   component: AdminPage,
@@ -22,8 +26,13 @@ function AdminPage() {
   const { user, ready } = useSession();
 
   const [users, setUsers] = useState<User[]>([]);
+
   const [bets, setBets] = useState<Bet[]>([]);
+
+  const [results, setResults] = useState<any[]>([]);
+
   const [loading, setLoading] = useState(true);
+
   const [, force] = useState(0);
 
   useEffect(() => subscribe(() => force((x) => x + 1)), []);
@@ -33,15 +42,19 @@ function AdminPage() {
       try {
         setLoading(true);
 
-        const [loadedUsers, loadedBets] = await Promise.all([
+        const [loadedUsers, loadedBets, loadedResults] = await Promise.all([
           getUsers(),
           getBets(),
+          getMatchResults(),
         ]);
 
         setUsers(loadedUsers);
+
         setBets(loadedBets);
+
+        setResults(loadedResults);
       } catch (error) {
-        console.error("Erro ao carregar admin:", error);
+        console.error(error);
       } finally {
         setLoading(false);
       }
@@ -53,47 +66,111 @@ function AdminPage() {
   }, [user]);
 
   if (!ready) return null;
-  if (!user || !user.isAdmin) return <Navigate to="/apostas" />;
+
+  if (!user || !user.isAdmin) {
+    return <Navigate to="/apostas" />;
+  }
 
   const stageState = getStageState();
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8 space-y-10">
+    <main
+      className="
+mx-auto
+max-w-6xl
+space-y-10
+px-4
+py-8
+"
+    >
       <div>
-        <h2 className="font-display text-4xl">Painel do Administrador</h2>
-        <p className="text-sm text-muted-foreground">
-          Gerencie usuários, baixe apostas e controle as fases da competição.
+        <h2
+          className="
+font-display
+text-4xl
+"
+        >
+          Painel Admin
+        </h2>
+
+        <p
+          className="
+text-sm
+text-muted-foreground
+"
+        >
+          Controle do bolão
         </p>
       </div>
 
-      <section className="rounded-xl border border-border bg-card p-5">
-        <h3 className="font-display text-2xl">Fases da Competição</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Abra a próxima fase quando a anterior terminar.
-        </p>
+      {/* fases */}
 
-        <div className="mt-4 grid gap-2 sm:grid-cols-2">
-          {STAGES.map((s) => {
-            const open = stageState.open[s.id] ?? false;
+      <section
+        className="
+rounded-xl
+border
+bg-card
+p-5
+"
+      >
+        <h3
+          className="
+font-display
+text-2xl
+"
+        >
+          Fases
+        </h3>
+
+        <div
+          className="
+mt-4
+grid
+gap-2
+sm:grid-cols-2
+"
+        >
+          {STAGES.map((stage) => {
+            const open = stageState.open[stage.id] ?? false;
 
             return (
               <label
-                key={s.id}
-                className="flex items-center justify-between rounded-lg border border-border bg-background/40 px-4 py-3"
+                key={stage.id}
+                className="
+flex
+items-center
+justify-between
+rounded-lg
+border
+p-4
+"
               >
-                <span className="font-medium">{s.label}</span>
+                <span>{stage.label}</span>
 
                 <button
                   type="button"
-                  onClick={() => setStageOpen(s.id, !open)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
-                    open ? "bg-primary" : "bg-muted"
-                  }`}
+                  onClick={() => setStageOpen(stage.id, !open)}
+                  className={`
+relative
+inline-flex
+h-6 w-11
+rounded-full
+
+${open ? "bg-primary" : "bg-muted"}
+
+`}
                 >
                   <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
-                      open ? "translate-x-6" : "translate-x-1"
-                    }`}
+                    className={`
+inline-block
+h-4 w-4
+rounded-full
+bg-white
+transition
+
+${open ? "translate-x-6" : "translate-x-1"}
+
+`}
                   />
                 </button>
               </label>
@@ -102,92 +179,221 @@ function AdminPage() {
         </div>
       </section>
 
-      <section className="rounded-xl border border-border bg-card p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* export csv */}
+
+      <section
+        className="
+rounded-xl
+border
+bg-card
+p-5
+"
+      >
+        <div
+          className="
+flex
+justify-between
+"
+        >
           <div>
-            <h3 className="font-display text-2xl">Apostas</h3>
-            <p className="text-sm text-muted-foreground">
+            <h3
+              className="
+font-display
+text-2xl
+"
+            >
+              Apostas
+            </h3>
+
+            <p
+              className="
+text-sm
+text-muted-foreground
+"
+            >
               {loading
-                ? "Carregando dados..."
-                : `${bets.length} palpites registrados de ${users.length} usuário(s).`}
+                ? "Carregando"
+                : `${bets.length}
+apostas`}
             </p>
           </div>
 
           <button
-            type="button"
-            disabled={loading}
             onClick={() =>
               downloadCSV(
-                `bolao-apostas-${new Date().toISOString().slice(0, 10)}.csv`,
-                betsToCSV(bets, users)
+                `apostas.csv`,
+
+                betsToCSV(bets, users),
               )
             }
-            className="rounded-lg bg-primary px-4 py-2 font-medium text-primary-foreground shadow hover:opacity-90 disabled:opacity-50"
+            className="
+rounded-lg
+bg-primary
+px-4 py-2
+text-white
+"
           >
-            Baixar CSV (todos)
+            CSV
           </button>
         </div>
       </section>
 
-      <section className="rounded-xl border border-border bg-card p-5">
-        <h3 className="mb-4 font-display text-2xl">Usuários</h3>
+      {/* resultados */}
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <tr className="border-b border-border">
-                <th className="py-2 pr-3">Nome</th>
-                <th className="py-2 pr-3">E-mail</th>
-                <th className="py-2 pr-3">Apostas</th>
-                <th className="py-2 pr-3">Cadastro</th>
-              </tr>
-            </thead>
+      <section
+        className="
+rounded-xl
+border
+bg-card
+p-5
+"
+      >
+        <h3
+          className="
+font-display
+text-2xl
+"
+        >
+          Resultados Oficiais
+        </h3>
 
-            <tbody>
-              {!loading && users.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={4}
-                    className="py-6 text-center text-muted-foreground"
+        <div
+          className="
+mt-5
+space-y-4
+"
+        >
+          {MATCHES.map((match) => {
+            const existing = results.find((r) => r.match_id === match.id);
+
+            const home = TEAMS[match.home];
+
+            const away = TEAMS[match.away];
+
+            return (
+              <div
+                key={match.id}
+                className="
+flex
+items-center
+justify-between
+rounded-xl
+border
+p-4
+"
+              >
+                <div>
+                  <div
+                    className="
+font-medium
+"
                   >
-                    Nenhum usuário cadastrado ainda.
-                  </td>
-                </tr>
-              )}
+                    {home.name}
+                    {" x "}
+                    {away.name}
+                  </div>
 
-              {users.map((u) => {
-                const count = bets.filter((b) => b.userId === u.id).length;
-
-                return (
-                  <tr
-                    key={u.id}
-                    className="border-b border-border/60 last:border-0"
+                  <div
+                    className="
+text-xs
+text-muted-foreground
+"
                   >
-                    <td className="py-3 pr-3 font-medium">
-                      {u.name}
+                    {match.id}
+                  </div>
+                </div>
 
-                      {u.isAdmin && (
-                        <span className="ml-1 rounded bg-accent/20 px-1.5 py-0.5 text-[10px] uppercase text-accent">
-                          admin
-                        </span>
-                      )}
-                    </td>
+                <div
+                  className="
+flex
+gap-2
+"
+                >
+                  <input
+                    id={`h-${match.id}`}
+                    defaultValue={existing?.home_score ?? ""}
+                    type="number"
+                    className="
+w-14
+rounded
+border
+p-2
+"
+                  />
+                  ×
+                  <input
+                    id={`a-${match.id}`}
+                    defaultValue={existing?.away_score ?? ""}
+                    type="number"
+                    className="
+                    w-14
+                    rounded
+                    border
+                    p-2
+                    "
+                  />
+                  <button
+                    onClick={async () => {
+                      const homeInput = document.getElementById(
+                        `h-${match.id}`,
+                      ) as HTMLInputElement;
 
-                    <td className="py-3 pr-3 text-muted-foreground">
-                      {u.email}
-                    </td>
+                      const awayInput = document.getElementById(
+                        `a-${match.id}`,
+                      ) as HTMLInputElement;
 
-                    <td className="py-3 pr-3">{count}</td>
+                      const h = Number(homeInput.value);
 
-                    <td className="py-3 pr-3 text-muted-foreground">
-                      {new Date(u.createdAt).toLocaleDateString("pt-BR")}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      const a = Number(awayInput.value);
+
+                      await saveMatchResult(match.id, h, a);
+
+                      const updated = await getMatchResults();
+
+                      setResults(updated);
+
+                      alert("Salvo");
+                    }}
+                    className="
+                      rounded
+                      bg-primary
+                      px-3 py-2
+                      text-white
+                      "
+                  >
+                    Salvar
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
+      </section>
+
+      {/* usuários */}
+
+      <section
+        className="
+        rounded-xl
+        border
+        bg-card
+        p-5
+        "
+      >
+        <h3
+          className="
+          font-display
+          text-2xl
+          mb-4
+          "
+        >
+          Usuários
+        </h3>
+
+        <p>
+          {users.length}
+          registrados
+        </p>
       </section>
     </main>
   );
