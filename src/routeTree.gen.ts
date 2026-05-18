@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthGroupsRouteImport } from './routes/_auth/groups'
 import { Route as AuthApostasRouteImport } from './routes/_auth/apostas'
 import { Route as AuthAdminRouteImport } from './routes/_auth/admin'
 
@@ -29,6 +30,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthGroupsRoute = AuthGroupsRouteImport.update({
+  id: '/groups',
+  path: '/groups',
+  getParentRoute: () => AuthRoute,
+} as any)
 const AuthApostasRoute = AuthApostasRouteImport.update({
   id: '/apostas',
   path: '/apostas',
@@ -45,12 +51,14 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/admin': typeof AuthAdminRoute
   '/apostas': typeof AuthApostasRoute
+  '/groups': typeof AuthGroupsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/reset-password': typeof ResetPasswordRoute
   '/admin': typeof AuthAdminRoute
   '/apostas': typeof AuthApostasRoute
+  '/groups': typeof AuthGroupsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -59,12 +67,13 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/_auth/admin': typeof AuthAdminRoute
   '/_auth/apostas': typeof AuthApostasRoute
+  '/_auth/groups': typeof AuthGroupsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/reset-password' | '/admin' | '/apostas'
+  fullPaths: '/' | '/reset-password' | '/admin' | '/apostas' | '/groups'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/reset-password' | '/admin' | '/apostas'
+  to: '/' | '/reset-password' | '/admin' | '/apostas' | '/groups'
   id:
     | '__root__'
     | '/'
@@ -72,6 +81,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/_auth/admin'
     | '/_auth/apostas'
+    | '/_auth/groups'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -103,6 +113,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_auth/groups': {
+      id: '/_auth/groups'
+      path: '/groups'
+      fullPath: '/groups'
+      preLoaderRoute: typeof AuthGroupsRouteImport
+      parentRoute: typeof AuthRoute
+    }
     '/_auth/apostas': {
       id: '/_auth/apostas'
       path: '/apostas'
@@ -123,11 +140,13 @@ declare module '@tanstack/react-router' {
 interface AuthRouteChildren {
   AuthAdminRoute: typeof AuthAdminRoute
   AuthApostasRoute: typeof AuthApostasRoute
+  AuthGroupsRoute: typeof AuthGroupsRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
   AuthAdminRoute: AuthAdminRoute,
   AuthApostasRoute: AuthApostasRoute,
+  AuthGroupsRoute: AuthGroupsRoute,
 }
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)

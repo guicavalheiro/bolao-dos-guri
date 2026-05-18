@@ -436,3 +436,166 @@ export async function forgotPassword(
    }
  )
 }
+
+/* ===========================
+   GROUPS
+=========================== */
+
+export interface Group {
+  id: string;
+  name: string;
+  description?: string;
+  ownerId: string;
+  createdAt: string;
+}
+
+export async function createGroup(
+  ownerId: string,
+  name: string,
+  description = ""
+) {
+  const { data, error } = await supabase
+    .from("groups")
+    .insert({
+      owner_id: ownerId,
+      name,
+      description,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  // dono entra automaticamente
+  await supabase.from("group_members").insert({
+    group_id: data.id,
+    user_id: ownerId,
+    role: "owner",
+  });
+
+  notify();
+
+  return data;
+}
+
+export async function getGroups(): Promise<Group[]> {
+  const { data, error } =
+    await supabase
+      .from("groups")
+      .select("*")
+      .order("created_at");
+
+  if (error) throw error;
+
+  return (data ?? []).map(g => ({
+    id: g.id,
+    name: g.name,
+    description: g.description,
+    ownerId: g.owner_id,
+    createdAt: g.created_at,
+  }));
+}
+
+export async function getUserGroups(
+  userId: string
+) {
+  const { data, error } =
+    await supabase
+      .from("group_members")
+      .select(`
+        role,
+        groups(*)
+      `)
+      .eq("user_id", userId);
+
+  if (error) throw error;
+
+  return data;
+}
+
+export async function requestJoinGroup(
+  groupId: string,
+  userId: string
+) {
+  const { error } =
+    await supabase
+      .from("group_join_requests")
+      .insert({
+        group_id: groupId,
+        user_id: userId,
+      });
+
+  if (error) throw error;
+
+  notify();
+}
+
+export async function getPendingRequestsForOwner(
+  ownerId: string
+) {
+  const { data, error } =
+    await supabase
+      .from("group_join_requests")
+      .select(`
+        *,
+        profiles(name,email),
+        groups!inner(owner_id)
+      `)
+      .eq("groups.owner_id", ownerId)
+      .eq("status","pending");
+
+  if (error) throw error;
+
+  return data;
+}
+
+export async function approveJoinRequest(
+  requestId:number,
+  groupId:string,
+  userId:string
+){
+  const { error } =
+    await supabase
+      .from("group_members")
+      .insert({
+        group_id: groupId,
+        user_id: userId,
+        role:"member"
+      });
+
+  if(error) throw error;
+
+  await supabase
+    .from("group_join_requests")
+    .update({
+      status:"approved"
+    })
+    .eq("id",requestId);
+
+  notify();
+}
+
+export async function rejectJoinRequest(
+ requestId:number
+){
+ await supabase
+   .from("group_join_requests")
+   .update({
+     status:"rejected"
+   })
+   .eq("id",requestId);
+
+ notify();
+}
+
+export async function getUserJoinRequests(userId: string) {
+  const { data, error } = await supabase
+    .from("group_join_requests")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("status", "pending");
+
+  if (error) throw error;
+
+  return data ?? [];
+}
