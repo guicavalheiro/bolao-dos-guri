@@ -622,12 +622,17 @@ export async function getGroupRanking(groupId: string) {
   const ranking = members.map((member) => {
     let points = 0;
 
+    const breakdown: any[] = [];
+
     predictions
       ?.filter((p) => p.user_id === member.user_id)
+
       .forEach((pred) => {
         const result = results?.find((r) => r.match_id === pred.match_id);
 
         if (!result) return;
+
+        let gained = 0;
 
         const exact =
           pred.home_score === result.home_score && pred.away_score === result.away_score;
@@ -636,13 +641,28 @@ export async function getGroupRanking(groupId: string) {
 
         const winnerReal = Math.sign(result.home_score - result.away_score);
 
-        if (exact) points += 5;
-        else if (winnerPred === winnerReal) points += 3;
+        if (exact) gained = 5;
+        else if (winnerPred === winnerReal) gained = 3;
+
+        points += gained;
+
+        breakdown.push({
+          matchId: pred.match_id,
+
+          predicted: `${pred.home_score}x${pred.away_score}`,
+
+          official: `${result.home_score}x${result.away_score}`,
+
+          points: gained,
+        });
       });
 
     return {
       ...member,
+
       points,
+
+      breakdown,
     };
   });
 
