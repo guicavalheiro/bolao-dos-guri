@@ -42,11 +42,7 @@ function notify() {
   }
 }
 
-export async function registerUser(
-  name: string,
-  email: string,
-  password: string
-): Promise<User> {
+export async function registerUser(name: string, email: string, password: string): Promise<User> {
   const emailLc = email.trim().toLowerCase();
 
   const { data, error } = await supabase.auth.signUp({
@@ -72,10 +68,7 @@ export async function registerUser(
   return sessionUser;
 }
 
-export async function loginUser(
-  email: string,
-  password: string
-): Promise<User> {
+export async function loginUser(email: string, password: string): Promise<User> {
   const emailLc = email.trim().toLowerCase();
 
   const { data, error } = await supabase.auth.signInWithPassword({
@@ -139,7 +132,7 @@ export function currentUser(): User | null {
 }
 
 export function subscribe(cb: () => void): () => void {
-  if (typeof window === "undefined") return () => { };
+  if (typeof window === "undefined") return () => {};
 
   const handler = () => cb();
 
@@ -168,7 +161,7 @@ async function upsertCurrentProfile(user: User) {
     },
     {
       onConflict: "id",
-    }
+    },
   );
 
   if (error) {
@@ -218,20 +211,18 @@ export function setStageOpen(stageId: string, open: boolean) {
 export async function saveBet(bet: Bet) {
   console.log("Entrou no saveBet:", bet);
 
-  const { error } = await supabase
-    .from("predictions")
-    .upsert(
-      {
-        user_id: bet.userId,
-        match_id: bet.matchId,
-        home_score: bet.homeScore,
-        away_score: bet.awayScore,
-        updated_at: bet.updatedAt,
-      },
-      {
-        onConflict: "user_id,match_id",
-      }
-    );
+  const { error } = await supabase.from("predictions").upsert(
+    {
+      user_id: bet.userId,
+      match_id: bet.matchId,
+      home_score: bet.homeScore,
+      away_score: bet.awayScore,
+      updated_at: bet.updatedAt,
+    },
+    {
+      onConflict: "user_id,match_id",
+    },
+  );
 
   console.log("Resposta Supabase saveBet:", {
     error,
@@ -245,13 +236,8 @@ export async function saveBet(bet: Bet) {
   notify();
 }
 
-export async function getUserBets(
-  userId: string
-): Promise<Record<string, Bet>> {
-  const { data, error } = await supabase
-    .from("predictions")
-    .select("*")
-    .eq("user_id", userId);
+export async function getUserBets(userId: string): Promise<Record<string, Bet>> {
+  const { data, error } = await supabase.from("predictions").select("*").eq("user_id", userId);
 
   if (error) throw error;
 
@@ -265,14 +251,11 @@ export async function getUserBets(
         awayScore: b.away_score,
         updatedAt: b.updated_at,
       },
-    ])
+    ]),
   );
 }
 
-export async function getUserBet(
-  userId: string,
-  matchId: string
-): Promise<Bet | null> {
+export async function getUserBet(userId: string, matchId: string): Promise<Bet | null> {
   const { data, error } = await supabase
     .from("predictions")
     .select("*")
@@ -352,9 +335,7 @@ export function betsToCSV(bets: Bet[], users: User[]) {
   });
 
   return [header, ...rows]
-    .map((row) =>
-      row.map((value) => `"${String(value ?? "").replace(/"/g, '""')}"`).join(",")
-    )
+    .map((row) => row.map((value) => `"${String(value ?? "").replace(/"/g, '""')}"`).join(","))
     .join("\n");
 }
 
@@ -394,7 +375,7 @@ export async function saveSpecialPrediction(item: SpecialPrediction) {
     },
     {
       onConflict: "user_id,category",
-    }
+    },
   );
 
   if (error) throw error;
@@ -403,7 +384,7 @@ export async function saveSpecialPrediction(item: SpecialPrediction) {
 }
 
 export async function getUserSpecialPredictions(
-  userId: string
+  userId: string,
 ): Promise<Record<string, SpecialPrediction>> {
   const { data, error } = await supabase
     .from("special_predictions")
@@ -421,20 +402,14 @@ export async function getUserSpecialPredictions(
         prediction: item.prediction,
         updatedAt: item.updated_at,
       },
-    ])
+    ]),
   );
 }
 
-export async function forgotPassword(
-  email: string
-) {
-  return supabase.auth.resetPasswordForEmail(
-    email,
-    {
-      redirectTo:
-        `${window.location.origin}/reset-password`
-    }
-  )
+export async function forgotPassword(email: string) {
+  return supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/reset-password`,
+  });
 }
 
 /* ===========================
@@ -449,11 +424,7 @@ export interface Group {
   createdAt: string;
 }
 
-export async function createGroup(
-  ownerId: string,
-  name: string,
-  description = ""
-) {
+export async function createGroup(ownerId: string, name: string, description = "") {
   const { data, error } = await supabase
     .from("groups")
     .insert({
@@ -479,15 +450,11 @@ export async function createGroup(
 }
 
 export async function getGroups(): Promise<Group[]> {
-  const { data, error } =
-    await supabase
-      .from("groups")
-      .select("*")
-      .order("created_at");
+  const { data, error } = await supabase.from("groups").select("*").order("created_at");
 
   if (error) throw error;
 
-  return (data ?? []).map(g => ({
+  return (data ?? []).map((g) => ({
     id: g.id,
     name: g.name,
     description: g.description,
@@ -496,34 +463,27 @@ export async function getGroups(): Promise<Group[]> {
   }));
 }
 
-export async function getUserGroups(
-  userId: string
-) {
-  const { data, error } =
-    await supabase
-      .from("group_members")
-      .select(`
+export async function getUserGroups(userId: string) {
+  const { data, error } = await supabase
+    .from("group_members")
+    .select(
+      `
         role,
         groups(*)
-      `)
-      .eq("user_id", userId);
+      `,
+    )
+    .eq("user_id", userId);
 
   if (error) throw error;
 
   return data;
 }
 
-export async function requestJoinGroup(
-  groupId: string,
-  userId: string
-) {
-  const { error } =
-    await supabase
-      .from("group_join_requests")
-      .insert({
-        group_id: groupId,
-        user_id: userId,
-      });
+export async function requestJoinGroup(groupId: string, userId: string) {
+  const { error } = await supabase.from("group_join_requests").insert({
+    group_id: groupId,
+    user_id: userId,
+  });
 
   if (error) throw error;
 
@@ -565,39 +525,30 @@ export async function getPendingRequestsForOwner(ownerId: string) {
     group: ownerGroups?.find((group) => group.id === req.group_id),
   }));
 }
-export async function approveJoinRequest(
-  requestId: number,
-  groupId: string,
-  userId: string
-) {
-  const { error } =
-    await supabase
-      .from("group_members")
-      .insert({
-        group_id: groupId,
-        user_id: userId,
-        role: "member"
-      });
+export async function approveJoinRequest(requestId: number, groupId: string, userId: string) {
+  const { error } = await supabase.from("group_members").insert({
+    group_id: groupId,
+    user_id: userId,
+    role: "member",
+  });
 
   if (error) throw error;
 
   await supabase
     .from("group_join_requests")
     .update({
-      status: "approved"
+      status: "approved",
     })
     .eq("id", requestId);
 
   notify();
 }
 
-export async function rejectJoinRequest(
-  requestId: number
-) {
+export async function rejectJoinRequest(requestId: number) {
   await supabase
     .from("group_join_requests")
     .update({
-      status: "rejected"
+      status: "rejected",
     })
     .eq("id", requestId);
 
@@ -617,11 +568,7 @@ export async function getUserJoinRequests(userId: string) {
 }
 
 export async function getGroupById(groupId: string): Promise<Group | null> {
-  const { data, error } = await supabase
-    .from("groups")
-    .select("*")
-    .eq("id", groupId)
-    .maybeSingle();
+  const { data, error } = await supabase.from("groups").select("*").eq("id", groupId).maybeSingle();
 
   if (error) throw error;
   if (!data) return null;
@@ -661,79 +608,66 @@ export async function getGroupMembers(groupId: string) {
 }
 
 export async function getGroupRanking(groupId: string) {
+  const members = await getGroupMembers(groupId);
 
-  const members =
-    await getGroupMembers(groupId);
+  const userIds = members.map((m) => m.user_id);
 
-  const userIds =
-    members.map(m => m.user_id);
+  const { data: predictions } = await supabase
+    .from("predictions")
+    .select("*")
+    .in("user_id", userIds);
 
-  const { data: predictions } =
-    await supabase
-      .from("predictions")
-      .select("*")
-      .in("user_id", userIds);
+  const { data: results } = await supabase.from("match_results").select("*");
 
-  const { data: results } =
-    await supabase
-      .from("match_results")
-      .select("*");
+  const ranking = members.map((member) => {
+    let points = 0;
 
-  const ranking =
-    members.map(member => {
+    predictions
+      ?.filter((p) => p.user_id === member.user_id)
+      .forEach((pred) => {
+        const result = results?.find((r) => r.match_id === pred.match_id);
 
-      let points = 0;
+        if (!result) return;
 
-      predictions
-        ?.filter(
-          p =>
-            p.user_id === member.user_id
-        )
-        .forEach(pred => {
+        const exact =
+          pred.home_score === result.home_score && pred.away_score === result.away_score;
 
-          const result =
-            results?.find(
-              r =>
-                r.match_id === pred.match_id
-            );
+        const winnerPred = Math.sign(pred.home_score - pred.away_score);
 
-          if (!result) return;
+        const winnerReal = Math.sign(result.home_score - result.away_score);
 
-          const exact =
-            pred.home_score === result.home_score &&
-            pred.away_score === result.away_score;
+        if (exact) points += 5;
+        else if (winnerPred === winnerReal) points += 3;
+      });
 
-          const winnerPred =
-            Math.sign(
-              pred.home_score -
-              pred.away_score
-            );
+    return {
+      ...member,
+      points,
+    };
+  });
 
-          const winnerReal =
-            Math.sign(
-              result.home_score -
-              result.away_score
-            );
+  return ranking.sort((a, b) => b.points - a.points);
+}
 
-          if (exact)
-            points += 5;
+export async function getMatchResults() {
+  const { data, error } = await supabase.from("match_results").select("*");
 
-          else if (
-            winnerPred === winnerReal
-          )
-            points += 3;
+  if (error) throw error;
 
-        });
+  return data ?? [];
+}
 
-      return {
-        ...member,
-        points
-      };
-
-    });
-
-  return ranking.sort(
-    (a, b) =>
-      b.points - a.points
+export async function saveMatchResult(matchId: string, home: number, away: number) {
+  const { error } = await supabase.from("match_results").upsert(
+    {
+      match_id: matchId,
+      home_score: home,
+      away_score: away,
+    },
+    {
+      onConflict: "match_id",
+    },
   );
+
+  if (error) throw error;
 }
