@@ -12,6 +12,8 @@ import {
   subscribe,
   getMatchResults,
   saveMatchResult,
+  getSpecialResults,
+  saveSpecialResult,
   type User,
   type Bet,
 } from "@/lib/store";
@@ -35,6 +37,8 @@ function AdminPage() {
 
   const [, force] = useState(0);
 
+  const [specialResults, setSpecialResults] = useState<any[]>([]);
+
   useEffect(() => subscribe(() => force((x) => x + 1)), []);
 
   useEffect(() => {
@@ -42,10 +46,11 @@ function AdminPage() {
       try {
         setLoading(true);
 
-        const [loadedUsers, loadedBets, loadedResults] = await Promise.all([
+        const [loadedUsers, loadedBets, loadedResults, loadedSpecials] = await Promise.all([
           getUsers(),
           getBets(),
           getMatchResults(),
+          getSpecialResults(),
         ]);
 
         setUsers(loadedUsers);
@@ -53,6 +58,8 @@ function AdminPage() {
         setBets(loadedBets);
 
         setResults(loadedResults);
+
+        setSpecialResults(loadedSpecials);
       } catch (error) {
         console.error(error);
       } finally {
@@ -73,104 +80,83 @@ function AdminPage() {
 
   const stageState = getStageState();
 
-  return (
-    <main
-      className="
-mx-auto
-max-w-6xl
-space-y-10
-px-4
-py-8
-"
-    >
-      <div>
-        <h2
-          className="
-font-display
-text-4xl
-"
-        >
-          Painel Admin
-        </h2>
+  const SPECIALS = [
+    {
+      id: "champion",
+      label: "Campeão",
+    },
 
-        <p
-          className="
-text-sm
-text-muted-foreground
-"
-        >
-          Controle do bolão
-        </p>
+    {
+      id: "runner_up",
+      label: "2º colocado",
+    },
+
+    {
+      id: "third_place",
+      label: "3º colocado",
+    },
+
+    {
+      id: "golden_boot",
+      label: "Chuteira de Ouro",
+    },
+
+    {
+      id: "golden_ball",
+      label: "Bola de Ouro",
+    },
+
+    {
+      id: "golden_glove",
+      label: "Luva de Ouro",
+    },
+
+    {
+      id: "best_young_player",
+      label: "Melhor jogador jovem",
+    },
+
+    {
+      id: "surprise_team",
+      label: "Seleção surpresa",
+    },
+  ];
+
+  return (
+    <main className="mx-auto max-w-6xl space-y-10 px-4 py-8">
+      <div>
+        <h2 className="font-display text-4xl">Painel Admin</h2>
+
+        <p className="text-sm text-muted-foreground">Controle do bolão</p>
       </div>
 
       {/* fases */}
 
-      <section
-        className="
-rounded-xl
-border
-bg-card
-p-5
-"
-      >
-        <h3
-          className="
-font-display
-text-2xl
-"
-        >
-          Fases
-        </h3>
+      <section className="rounded-xl border bg-card p-5">
+        <h3 className="font-display text-2xl">Fases</h3>
 
-        <div
-          className="
-mt-4
-grid
-gap-2
-sm:grid-cols-2
-"
-        >
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
           {STAGES.map((stage) => {
             const open = stageState.open[stage.id] ?? false;
 
             return (
               <label
                 key={stage.id}
-                className="
-flex
-items-center
-justify-between
-rounded-lg
-border
-p-4
-"
+                className="flex items-center justify-between rounded-lg border p-4"
               >
                 <span>{stage.label}</span>
 
                 <button
                   type="button"
                   onClick={() => setStageOpen(stage.id, !open)}
-                  className={`
-relative
-inline-flex
-h-6 w-11
-rounded-full
-
-${open ? "bg-primary" : "bg-muted"}
-
-`}
+                  className={`relative inline-flex h-6 w-11 rounded-full 
+                    ${open ? "bg-primary" : "bg-muted"}
+                  `}
                 >
                   <span
-                    className={`
-inline-block
-h-4 w-4
-rounded-full
-bg-white
-transition
-
-${open ? "translate-x-6" : "translate-x-1"}
-
-`}
+                    className={`inline-block h-4 w-4 rounded-full bg-white transition
+                      ${open ? "translate-x-6" : "translate-x-1"}
+                    `}
                   />
                 </button>
               </label>
@@ -181,57 +167,22 @@ ${open ? "translate-x-6" : "translate-x-1"}
 
       {/* export csv */}
 
-      <section
-        className="
-rounded-xl
-border
-bg-card
-p-5
-"
-      >
-        <div
-          className="
-flex
-justify-between
-"
-        >
+      <section className="rounded-xl border bg-card p-5">
+        <div className="flex justify-between">
           <div>
-            <h3
-              className="
-font-display
-text-2xl
-"
-            >
-              Apostas
-            </h3>
+            <h3 className="font-display text-2xl">Apostas</h3>
 
-            <p
-              className="
-text-sm
-text-muted-foreground
-"
-            >
+            <p className="text-sm text-muted-foreground">
               {loading
                 ? "Carregando"
                 : `${bets.length}
-apostas`}
+                apostas`}
             </p>
           </div>
 
           <button
-            onClick={() =>
-              downloadCSV(
-                `apostas.csv`,
-
-                betsToCSV(bets, users),
-              )
-            }
-            className="
-rounded-lg
-bg-primary
-px-4 py-2
-text-white
-"
+            onClick={() => downloadCSV(`apostas.csv`, betsToCSV(bets, users))}
+            className="rounded-lg bg-primary px-4 py-2 text-white"
           >
             CSV
           </button>
@@ -240,29 +191,10 @@ text-white
 
       {/* resultados */}
 
-      <section
-        className="
-rounded-xl
-border
-bg-card
-p-5
-"
-      >
-        <h3
-          className="
-font-display
-text-2xl
-"
-        >
-          Resultados Oficiais
-        </h3>
+      <section className="rounded-xl border bg-card p-5">
+        <h3 className="font-display text-2xl ">Resultados Oficiais</h3>
 
-        <div
-          className="
-mt-5
-space-y-4
-"
-        >
+        <div className="mt-5 space-y-4">
           {MATCHES.map((match) => {
             const existing = results.find((r) => r.match_id === match.id);
 
@@ -273,64 +205,31 @@ space-y-4
             return (
               <div
                 key={match.id}
-                className="
-flex
-items-center
-justify-between
-rounded-xl
-border
-p-4
-"
+                className="flex items-center justify-between rounded-xl border p-4"
               >
                 <div>
-                  <div
-                    className="
-font-medium
-"
-                  >
+                  <div className="font-medium">
                     {home.name}
                     {" x "}
                     {away.name}
                   </div>
 
-                  <div
-                    className="
-text-xs
-text-muted-foreground
-"
-                  >
-                    {match.id}
-                  </div>
+                  <div className="text-xs text-muted-foreground">{match.id}</div>
                 </div>
 
-                <div
-                  className="
-flex
-gap-2
-"
-                >
+                <div className="flex gap-2">
                   <input
                     id={`h-${match.id}`}
                     defaultValue={existing?.home_score ?? ""}
                     type="number"
-                    className="
-w-14
-rounded
-border
-p-2
-"
+                    className="w-14 rounded border p-2"
                   />
                   ×
                   <input
                     id={`a-${match.id}`}
                     defaultValue={existing?.away_score ?? ""}
                     type="number"
-                    className="
-                    w-14
-                    rounded
-                    border
-                    p-2
-                    "
+                    className="w-14 rounded border p-2"
                   />
                   <button
                     onClick={async () => {
@@ -354,12 +253,57 @@ p-2
 
                       alert("Salvo");
                     }}
-                    className="
-                      rounded
-                      bg-primary
-                      px-3 py-2
-                      text-white
-                      "
+                    className="rounded bg-primary px-3 py-2 text-white"
+                  >
+                    Salvar
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="rounded-xl border bg-card p-5">
+        <h3 className="font-display text-2xl">Resultados especiais</h3>
+
+        <div className="mt-5 space-y-4">
+          {SPECIALS.map((item) => {
+            const current = specialResults.find((s) => s.category === item.id);
+
+            return (
+              <div
+                key={item.label}
+                className="flex items-center justify-between rounded-xl border p-4"
+              >
+                <div>
+                  <b>{item.label}</b>
+                </div>
+
+                <div className="flex gap-2">
+                  <input
+                    id={`special-${item.id}`}
+                    defaultValue={current?.result ?? ""}
+                    className="rounded border p-2"
+                  />
+
+                  <button
+                    onClick={async () => {
+                      const inputElement = document.getElementById(`special-${item.id}`);
+
+                      if (!(inputElement instanceof HTMLInputElement)) {
+                        return;
+                      }
+
+                      await saveSpecialResult(item.id, inputElement.value);
+
+                      const updated = await getSpecialResults();
+
+                      setSpecialResults(updated);
+
+                      alert("Salvo");
+                    }}
+                    className="rounded bg-primary px-3 py-2 text-white"
                   >
                     Salvar
                   </button>
@@ -372,23 +316,8 @@ p-2
 
       {/* usuários */}
 
-      <section
-        className="
-        rounded-xl
-        border
-        bg-card
-        p-5
-        "
-      >
-        <h3
-          className="
-          font-display
-          text-2xl
-          mb-4
-          "
-        >
-          Usuários
-        </h3>
+      <section className="rounded-xl border bg-card p-5">
+        <h3 className="font-display text-2xl mb-4">Usuários</h3>
 
         <p>
           {users.length}
