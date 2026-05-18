@@ -139,7 +139,7 @@ export function currentUser(): User | null {
 }
 
 export function subscribe(cb: () => void): () => void {
-  if (typeof window === "undefined") return () => {};
+  if (typeof window === "undefined") return () => { };
 
   const handler = () => cb();
 
@@ -426,15 +426,15 @@ export async function getUserSpecialPredictions(
 }
 
 export async function forgotPassword(
- email:string
-){
- return supabase.auth.resetPasswordForEmail(
-   email,
-   {
-     redirectTo:
-       `${window.location.origin}/reset-password`
-   }
- )
+  email: string
+) {
+  return supabase.auth.resetPasswordForEmail(
+    email,
+    {
+      redirectTo:
+        `${window.location.origin}/reset-password`
+    }
+  )
 }
 
 /* ===========================
@@ -566,42 +566,42 @@ export async function getPendingRequestsForOwner(ownerId: string) {
   }));
 }
 export async function approveJoinRequest(
-  requestId:number,
-  groupId:string,
-  userId:string
-){
+  requestId: number,
+  groupId: string,
+  userId: string
+) {
   const { error } =
     await supabase
       .from("group_members")
       .insert({
         group_id: groupId,
         user_id: userId,
-        role:"member"
+        role: "member"
       });
 
-  if(error) throw error;
+  if (error) throw error;
 
   await supabase
     .from("group_join_requests")
     .update({
-      status:"approved"
+      status: "approved"
     })
-    .eq("id",requestId);
+    .eq("id", requestId);
 
   notify();
 }
 
 export async function rejectJoinRequest(
- requestId:number
-){
- await supabase
-   .from("group_join_requests")
-   .update({
-     status:"rejected"
-   })
-   .eq("id",requestId);
+  requestId: number
+) {
+  await supabase
+    .from("group_join_requests")
+    .update({
+      status: "rejected"
+    })
+    .eq("id", requestId);
 
- notify();
+  notify();
 }
 
 export async function getUserJoinRequests(userId: string) {
@@ -633,4 +633,107 @@ export async function getGroupById(groupId: string): Promise<Group | null> {
     ownerId: data.owner_id,
     createdAt: data.created_at,
   };
+}
+
+export async function getGroupMembers(groupId: string) {
+  const { data: members, error: membersError } = await supabase
+    .from("group_members")
+    .select("*")
+    .eq("group_id", groupId);
+
+  if (membersError) throw membersError;
+
+  const userIds = [...new Set((members ?? []).map((m) => m.user_id))];
+
+  if (userIds.length === 0) return [];
+
+  const { data: profiles, error: profilesError } = await supabase
+    .from("profiles")
+    .select("id,name,email")
+    .in("id", userIds);
+
+  if (profilesError) throw profilesError;
+
+  return (members ?? []).map((member) => ({
+    ...member,
+    profile: profiles?.find((profile) => profile.id === member.user_id),
+  }));
+}
+
+export async function getGroupRanking(groupId: string) {
+
+  const members =
+    await getGroupMembers(groupId);
+
+  const userIds =
+    members.map(m => m.user_id);
+
+  const { data: predictions } =
+    await supabase
+      .from("predictions")
+      .select("*")
+      .in("user_id", userIds);
+
+  const { data: results } =
+    await supabase
+      .from("match_results")
+      .select("*");
+
+  const ranking =
+    members.map(member => {
+
+      let points = 0;
+
+      predictions
+        ?.filter(
+          p =>
+            p.user_id === member.user_id
+        )
+        .forEach(pred => {
+
+          const result =
+            results?.find(
+              r =>
+                r.match_id === pred.match_id
+            );
+
+          if (!result) return;
+
+          const exact =
+            pred.home_score === result.home_score &&
+            pred.away_score === result.away_score;
+
+          const winnerPred =
+            Math.sign(
+              pred.home_score -
+              pred.away_score
+            );
+
+          const winnerReal =
+            Math.sign(
+              result.home_score -
+              result.away_score
+            );
+
+          if (exact)
+            points += 5;
+
+          else if (
+            winnerPred === winnerReal
+          )
+            points += 3;
+
+        });
+
+      return {
+        ...member,
+        points
+      };
+
+    });
+
+  return ranking.sort(
+    (a, b) =>
+      b.points - a.points
+  );
 }
