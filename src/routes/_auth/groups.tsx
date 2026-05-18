@@ -24,19 +24,17 @@ export const Route = createFileRoute("/_auth/groups")({
 
 function GroupsPage() {
   const { user } = useSession();
-  const pathname = useRouterState(
-    {select: (state) => state.location.pathname,});
-
-    if (pathname !== "/groups") {
-      return <Outlet />;
-    }
-
+  const pathname = useRouterState({select: (state) => state.location.pathname,});
   const [groups, setGroups] = useState<Group[]>([]);
   const [myGroups, setMyGroups] = useState<any[]>([]);
   const [joinRequests, setJoinRequests] = useState<any[]>([]);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+
+  if (pathname !== "/groups") {
+      return <Outlet />;
+    }
 
   async function refresh() {
     if (!user) return;

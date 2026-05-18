@@ -1,82 +1,154 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { getGroupById, type Group } from "@/lib/store";
+import {
+    getGroupById,
+    getGroupMembers,
+    type Group,
+} from "@/lib/store";
 
 export const Route =
-  createFileRoute("/_auth/groups/$groupId")({
-    component: GroupDetailsPage,
-  });
+    createFileRoute("/_auth/groups/$groupId")({
+        component: GroupDetailsPage,
+    });
 
 function GroupDetailsPage() {
-  const { groupId } = Route.useParams();
+    const { groupId } = Route.useParams();
 
-  const [group, setGroup] =
-    useState<Group | null>(null);
+    const [group, setGroup] =
+        useState<Group | null>(null);
 
-  useEffect(() => { loadGroup().catch(console.error); }, [groupId]);
-  
-  async function loadGroup() {
-    const data =
-      await getGroupById(groupId);
+    const [members, setMembers] =
+        useState<any[]>([]);
 
-    setGroup(data);
-  }
+    useEffect(() => { loadGroup().catch(console.error); }, [groupId]);
 
-  return (
-    <main className="mx-auto max-w-6xl px-4 py-8 space-y-8">
+    async function loadGroup() {
 
-      <Link
-        to="/groups"
-        className="
-        inline-flex items-center gap-2
-        rounded-lg border border-border
-        bg-card/50 px-4 py-2 text-sm
-        text-muted-foreground transition
-        hover:bg-card hover:text-foreground
-      "
-      >
-        ← Voltar aos grupos
-      </Link>
+        const data =
+            await getGroupById(groupId);
 
+        const users =
+            await getGroupMembers(groupId);
 
-      <div>
+        setGroup(data);
+        setMembers(users);
 
-        <h1 className="font-display text-5xl">
-          {group?.name || "Carregando..."}
-        </h1>
+    }
 
-        <p className="mt-2 text-muted-foreground">
-          {group?.description}
-        </p>
+    return (
+        <main className="mx-auto max-w-6xl px-4 py-8 space-y-8">
 
-      </div>
+            <Link
+                to="/groups"
+                className="
+                    inline-flex items-center gap-2
+                    rounded-lg border border-border
+                    bg-card/50 px-4 py-2 text-sm
+                    text-muted-foreground transition
+                    hover:bg-card hover:text-foreground"
+            >
+                ← Voltar aos grupos
+            </Link>
 
 
-      <section className="rounded-2xl border bg-card p-6">
+            <div>
 
-        <h2 className="text-2xl font-semibold">
-          Participantes
-        </h2>
+                <h1 className="font-display text-5xl">
+                    {group?.name || "Carregando..."}
+                </h1>
 
-        <p className="mt-2 text-muted-foreground">
-          Em breve
-        </p>
+                <p className="mt-2 text-muted-foreground">
+                    {group?.description}
+                </p>
 
-      </section>
+            </div>
 
 
-      <section className="rounded-2xl border bg-card p-6">
+            <section className="rounded-2xl border bg-card p-6">
 
-        <h2 className="text-2xl font-semibold">
-          Ranking
-        </h2>
+                <h2 className="text-2xl font-semibold">
+                    Participantes
+                </h2>
 
-        <p className="mt-2 text-muted-foreground">
-          Em breve
-        </p>
+                <div className="mt-5 space-y-3">
 
-      </section>
+                    {members.length === 0 && (
 
-    </main>
-  );
+                        <p className="text-muted-foreground">
+                            Nenhum participante
+                        </p>
+
+                    )}
+
+                    {members.map((member: any) => (
+
+                        <div
+                            key={member.profile?.id}
+                            className="
+                                flex items-center
+                                justify-between
+                                rounded-xl
+                                border border-border
+                                p-4
+                            "
+                        >
+
+                            <div>
+
+                                <div className="font-medium">
+
+                                    {member.role === "owner"
+                                        ? "👑 "
+                                        : "⚽ "}
+
+                                    {member.profile?.name}
+
+                                </div>
+
+                                <div className="
+                                    text-sm
+                                    text-muted-foreground"
+                                >
+                                    {member.profile?.email}
+                                </div>
+
+                            </div>
+
+                            <span className="
+                                rounded-full
+                                bg-primary/10
+                                px-3 py-1
+                                text-xs
+                                text-primary"
+                            >
+
+                                {member.role === "owner"
+                                    ? "Dono"
+                                    : "Participante"}
+
+                            </span>
+
+                        </div>
+
+                    ))}
+
+                </div>
+
+            </section>
+
+
+            <section className="rounded-2xl border bg-card p-6">
+
+                <h2 className="text-2xl font-semibold">
+                    Ranking
+                </h2>
+
+                <p className="mt-2 text-muted-foreground">
+                    Em breve
+                </p>
+
+            </section>
+
+        </main>
+    );
 }
