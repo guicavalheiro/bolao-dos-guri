@@ -1,7 +1,7 @@
 import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useSession } from "@/hooks/use-session";
-
+import { STAGES, MATCHES, TEAMS } from "@/lib/data/matches";
 import {
   getUsers,
   getBets,
@@ -17,8 +17,6 @@ import {
   type User,
   type Bet,
 } from "@/lib/store";
-
-import { STAGES, MATCHES, TEAMS } from "@/lib/data/matches";
 
 export const Route = createFileRoute("/_auth/admin")({
   component: AdminPage,
@@ -38,6 +36,8 @@ function AdminPage() {
   const [, force] = useState(0);
 
   const [specialResults, setSpecialResults] = useState<any[]>([]);
+
+  const TEAM_SPECIALS = ["champion", "runner_up", "third_place", "surprise_team"];
 
   useEffect(() => subscribe(() => force((x) => x + 1)), []);
 
@@ -281,17 +281,40 @@ function AdminPage() {
                 </div>
 
                 <div className="flex gap-2">
-                  <input
-                    id={`special-${item.id}`}
-                    defaultValue={current?.result ?? ""}
-                    className="rounded border p-2"
-                  />
+                  {TEAM_SPECIALS.includes(item.id) ? (
+                    <select
+                      id={`special-${item.id}`}
+                      defaultValue={TEAMS[current?.result]?.name ?? current?.result}
+                      className="rounded border border-border bg-input/40 px-3 py-2 text-foreground outline-none focus:border-primary"
+                    >
+                      <option value="" className="bg-background text-foreground">
+                        Escolha
+                      </option>
+
+                      {Object.entries(TEAMS)
+                        .sort(([, a], [, b]) => a.name.localeCompare(b.name, "pt-BR"))
+                        .map(([code, team]) => (
+                          <option key={code} value={code} className="bg-background text-foreground">
+                            {team.name}
+                          </option>
+                        ))}
+                    </select>
+                  ) : (
+                    <input
+                      id={`special-${item.id}`}
+                      defaultValue={TEAMS[current?.result]?.name ?? current?.result}
+                      className="rounded border border-border bg-input/40 px-3 py-2 text-foreground outline-none focus:border-primary"
+                    />
+                  )}
 
                   <button
                     onClick={async () => {
                       const inputElement = document.getElementById(`special-${item.id}`);
 
-                      if (!(inputElement instanceof HTMLInputElement)) {
+                      if (
+                        !(inputElement instanceof HTMLInputElement) &&
+                        !(inputElement instanceof HTMLSelectElement)
+                      ) {
                         return;
                       }
 

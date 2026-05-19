@@ -10,6 +10,7 @@ import {
   type Group,
 } from "@/lib/store";
 import { Flag } from "@/components/Flag";
+import { TEAMS } from "@/lib/data/matches";
 
 export const Route = createFileRoute("/_auth/groups/$groupId")({
   component: GroupDetailsPage,
@@ -329,11 +330,13 @@ function GroupDetailsPage() {
 
                   <div className="space-y-1 text-sm text-muted-foreground">
                     <p>
-                      Palpite: <b className="text-foreground">{b.predicted}</b>
+                      Palpite:{" "}
+                      <b className="text-foreground">{TEAMS[b.predicted]?.name ?? b.predicted}</b>
                     </p>
 
                     <p>
-                      Oficial: <b className="text-foreground">{b.official}</b>
+                      Oficial:{" "}
+                      <b className="text-foreground">{TEAMS[b.official]?.name ?? b.official}</b>
                     </p>
 
                     {b.type === "match" && <p>{b.reason}</p>}

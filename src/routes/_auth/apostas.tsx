@@ -12,6 +12,7 @@ import {
 } from "@/lib/store";
 import { useSession } from "@/hooks/use-session";
 import { Flag } from "@/components/Flag";
+import { PLAYERS } from "@/lib/data/players";
 
 export const Route = createFileRoute("/_auth/apostas")({
   component: BetsPage,
@@ -104,6 +105,10 @@ function BetsPage() {
 
     return !started && !userBets[match.id];
   });
+
+  const TEAM_SPECIALS = ["champion", "runner_up", "third_place", "surprise_team"];
+
+  const PLAYER_SPECIALS = ["golden_boot", "golden_ball", "golden_glove", "best_young_player"];
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
@@ -231,24 +236,61 @@ function BetsPage() {
                 <div key={item.id} className="rounded-xl border border-border bg-background/40 p-4">
                   <label className="font-medium">{item.label}</label>
 
-                  <input
-                    value={value}
-                    disabled={!groupOpen}
-                    onChange={(e) =>
-                      setSpecialInputs((prev) => ({
-                        ...prev,
-                        [item.id]: e.target.value,
-                      }))
-                    }
-                    placeholder="Digite seu palpite"
-                    className="mt-2 w-full rounded-md border border-border bg-input/40 px-3 py-2 outline-none focus:border-primary disabled:opacity-50"
-                  />
+                  {TEAM_SPECIALS.includes(item.id) ? (
+                    <select
+                      value={value}
+                      disabled={!groupOpen}
+                      onChange={(e) =>
+                        setSpecialInputs((prev) => ({
+                          ...prev,
+
+                          [item.id]: e.target.value,
+                        }))
+                      }
+                      className="mt-2 w-full rounded-md border border-border bg-input/40 px-3 py-2 text-foreground outline-none focus:border-primary disabled:opacity-50"
+                    >
+                      <option value="" className="bg-background text-foreground">
+                        Escolha
+                      </option>
+
+                      {Object.entries(TEAMS)
+
+                        .sort(([, a], [, b]) => a.name.localeCompare(b.name, "pt-BR"))
+
+                        .map(([code, team]) => (
+                          <option
+                            key={team.code}
+                            value={team.name}
+                            className="bg-background text-foreground"
+                          >
+                            {team.name}
+                          </option>
+                        ))}
+                    </select>
+                  ) : (
+                    <input
+                      value={value}
+                      disabled={!groupOpen}
+                      onChange={(e) =>
+                        setSpecialInputs((prev) => ({
+                          ...prev,
+
+                          [item.id]: e.target.value,
+                        }))
+                      }
+                      placeholder="Digite seu palpite"
+                      className="mt-2 w-full rounded-md border border-border bg-input/40 px-3 py-2"
+                    />
+                  )}
 
                   <div className="mt-3 flex items-center justify-between gap-3 text-xs">
                     <span className="text-muted-foreground">
                       {saved ? (
                         <>
-                          Salvo: <b className="text-foreground">{saved.prediction}</b>
+                          Salvo:{" "}
+                          <b className="text-foreground">
+                            {TEAMS[saved.prediction]?.name ?? saved.prediction}
+                          </b>
                         </>
                       ) : (
                         "Sem palpite ainda"
@@ -294,7 +336,7 @@ function BetsPage() {
         <h3 className="font-display text-xl">Próximas Fases</h3>
 
         <p className="mt-1 text-sm text-muted-foreground">
-          As próximas fases serão liberadas pelo administrador conforme a Copa avança.
+          As próximas fases serão conforme a Copa avança.
         </p>
 
         <div className="mt-3 flex flex-wrap gap-2">
