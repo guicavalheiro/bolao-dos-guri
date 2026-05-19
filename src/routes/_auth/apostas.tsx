@@ -108,7 +108,48 @@ function BetsPage() {
 
   const TEAM_SPECIALS = ["champion", "runner_up", "third_place", "surprise_team"];
 
-  const PLAYER_SPECIALS = ["golden_boot", "golden_ball", "golden_glove", "best_young_player"];
+  type PlayerSpecialCategory = "golden_boot" | "golden_ball" | "golden_glove" | "best_young_player";
+
+  const PLAYER_SPECIALS: PlayerSpecialCategory[] = [
+    "golden_boot",
+    "golden_ball",
+    "golden_glove",
+    "best_young_player",
+  ];
+
+  const PLAYER_SPECIAL_FILTERS: Record<PlayerSpecialCategory, string[]> = {
+    golden_boot: ["FW", "MF", "DF"],
+
+    golden_ball: ["GK", "DF", "MF", "FW"],
+
+    golden_glove: ["GK"],
+
+    best_young_player: ["GK", "DF", "MF", "FW"],
+  };
+
+  function getPlayersForCategory(category: PlayerSpecialCategory) {
+    let players = PLAYERS.filter((p) => PLAYER_SPECIAL_FILTERS[category].includes(p.position));
+
+    if (category === "best_young_player") {
+      players = players.filter((p) => p.age === null || p.age <= 21);
+    }
+
+    return players;
+  }
+
+  function getSpecialDisplayValue(value?: string) {
+    if (!value) return "";
+
+    const team = Object.values(TEAMS).find((t) => t.code === value);
+
+    if (team) return team.name;
+
+    const player = PLAYERS.find((p) => p.id === value);
+
+    if (player) return player.name;
+
+    return value;
+  }
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
@@ -267,6 +308,34 @@ function BetsPage() {
                           </option>
                         ))}
                     </select>
+                  ) : PLAYER_SPECIALS.includes(item.id as PlayerSpecialCategory) ? (
+                    <select
+                      value={value}
+                      disabled={!groupOpen}
+                      onChange={(e) =>
+                        setSpecialInputs((prev) => ({
+                          ...prev,
+                          [item.id]: e.target.value,
+                        }))
+                      }
+                      className="mt-2 w-full rounded-md border border-border bg-input/40 px-3 py-2 text-foreground outline-none focus:border-primary disabled:opacity-50"
+                    >
+                      <option value="" className="bg-background text-foreground">
+                        Escolha
+                      </option>
+
+                      {getPlayersForCategory(item.id as PlayerSpecialCategory)
+                        .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"))
+                        .map((player) => (
+                          <option
+                            key={player.id}
+                            value={player.id}
+                            className="bg-background text-foreground"
+                          >
+                            {player.name}
+                          </option>
+                        ))}
+                    </select>
                   ) : (
                     <input
                       value={value}
@@ -289,7 +358,7 @@ function BetsPage() {
                         <>
                           Salvo:{" "}
                           <b className="text-foreground">
-                            {TEAMS[saved.prediction]?.name ?? saved.prediction}
+                            {getSpecialDisplayValue(saved.prediction)}
                           </b>
                         </>
                       ) : (
