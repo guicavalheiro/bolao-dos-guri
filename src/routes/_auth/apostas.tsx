@@ -43,11 +43,21 @@ function BetsPage() {
   const [, force] = useState(0);
   const [userBets, setUserBets] = useState<Record<string, Bet>>({});
   const [activeGroup, setActiveGroup] = useState<Group | "ALL" | "SPECIALS">("ALL");
-
   const [specials, setSpecials] = useState<Record<string, any>>({});
   const [specialInputs, setSpecialInputs] = useState<Record<string, string>>({});
+  const [now, setNow] = useState(Date.now());
 
   useEffect(() => subscribe(() => force((x) => x + 1)), []);
+
+  useEffect(() => {
+    const id = setInterval(
+      () => setNow(Date.now()),
+
+      60000,
+    );
+
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -89,11 +99,33 @@ function BetsPage() {
         ? []
         : [activeGroup];
 
+  const pendingMatches = MATCHES.filter((match) => {
+    const started = new Date(match.dateBR).getTime() <= now;
+
+    return !started && !userBets[match.id];
+  });
+
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h2 className="font-display text-4xl">Fase de Grupos</h2>
+          {pendingMatches.length > 0 && (
+            <div className="mt-5 rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4">
+              <div className="font-medium">
+                ⚠️ Você ainda tem
+                <b> {pendingMatches.length} </b>
+                palpites pendentes
+              </div>
+              <div className="mt-2 text-sm text-muted-foreground">
+                {pendingMatches
+                  .slice(0, 3)
+                  .map((m) => `${TEAMS[m.home].name} x ${TEAMS[m.away].name}`)
+
+                  .join(", ")}
+              </div>
+            </div>
+          )}
           <p className="text-sm text-muted-foreground">
             Palpite o placar exato de cada jogo. Você pode editar enquanto a fase estiver aberta.
           </p>
@@ -339,6 +371,10 @@ function MatchCard({
     h !== (bet ? String(bet.homeScore) : "") || a !== (bet ? String(bet.awayScore) : "");
 
   const matchStarted = new Date() >= new Date(match.dateBR);
+  const diff = new Date(match.dateBR).getTime() - Date.now();
+  const hours = Math.floor(diff / 1000 / 60 / 60);
+  const days = Math.floor(hours / 24);
+
   const canSave = h !== "" && a !== "" && !disabled && !matchStarted && dirty;
 
   function save() {
@@ -351,7 +387,15 @@ function MatchCard({
   return (
     <article className="group rounded-xl border border-border bg-card p-4 transition hover:border-primary/40">
       <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
-        <span>{fmtBR.format(new Date(match.dateBR))}</span>
+        <div>
+          <div>{fmtBR.format(new Date(match.dateBR))}</div>
+          {!matchStarted && (
+            <div className="text-[10px] text-primary">
+              Fecha em:
+              {days > 0 ? ` ${days}d` : ` ${hours}h`}
+            </div>
+          )}
+        </div>
         <span className="truncate pl-2 text-right">{match.venue}</span>
       </div>
 
