@@ -3,14 +3,10 @@ import { useEffect, useState } from "react";
 import { useSession } from "@/hooks/use-session";
 import {
   createGroup,
-  getGroups,
   getUserGroups,
-  requestJoinGroup,
-  getUserJoinRequests,
   getPendingRequestsForOwner,
   approveJoinRequest,
   rejectJoinRequest,
-  type Group,
 } from "@/lib/store";
 
 export const Route = createFileRoute("/_auth/groups")({
@@ -20,12 +16,11 @@ export const Route = createFileRoute("/_auth/groups")({
 function GroupsPage() {
   const { user } = useSession();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const [groups, setGroups] = useState<Group[]>([]);
   const [myGroups, setMyGroups] = useState<any[]>([]);
-  const [joinRequests, setJoinRequests] = useState<any[]>([]);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+  const [invite, setInvite] = useState("");
 
   if (pathname !== "/groups") {
     return <Outlet />;
@@ -34,9 +29,7 @@ function GroupsPage() {
   async function refresh() {
     if (!user) return;
 
-    setGroups(await getGroups());
     setMyGroups(await getUserGroups(user.id));
-    setJoinRequests(await getUserJoinRequests(user.id));
     setPendingRequests(await getPendingRequestsForOwner(user.id));
   }
 
@@ -45,11 +38,6 @@ function GroupsPage() {
   }, [user]);
 
   if (!user) return null;
-
-  const myGroupIds = myGroups.map((g: any) => g.groups.id);
-  const requestedGroupIds = joinRequests.map((r: any) => r.group_id);
-
-  const availableGroups = groups.filter((group) => !myGroupIds.includes(group.id));
 
   return (
     <main className="mx-auto max-w-6xl space-y-10 px-4 py-8">
@@ -94,6 +82,77 @@ function GroupsPage() {
             className="rounded-xl bg-primary px-5 py-3 font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Criar grupo
+          </button>
+        </div>
+      </section>
+
+      <section
+        className="
+rounded-2xl
+border
+border-border
+bg-card
+p-6
+"
+      >
+        <h2
+          className="
+font-display
+text-2xl
+"
+        >
+          Entrar por convite
+        </h2>
+
+        <p
+          className="
+mt-1
+text-sm
+text-muted-foreground
+"
+        >
+          Cole um link recebido.
+        </p>
+
+        <div
+          className="
+mt-5
+flex
+gap-3
+"
+        >
+          <input
+            value={invite}
+            onChange={(e) => setInvite(e.target.value)}
+            placeholder="
+https://...
+"
+            className="
+flex-1
+rounded-lg
+border
+border-border
+bg-background
+px-4 py-2
+"
+          />
+
+          <button
+            onClick={() => {
+              const groupId = invite.split("/").pop();
+
+              if (!groupId) return;
+
+              window.location.href = `/groups/${groupId}`;
+            }}
+            className="
+rounded-lg
+bg-primary
+px-4 py-2
+text-primary-foreground
+"
+          >
+            Entrar
           </button>
         </div>
       </section>
@@ -175,9 +234,8 @@ function GroupsPage() {
           </div>
         )}
       </section>
-      <section>
+      {/* <section>
         <div className="mb-4">
-          <h2 className="font-display text-3xl">Explorar grupos</h2>
           <p className="text-sm text-muted-foreground">
             Solicite entrada em grupos criados por outros participantes.
           </p>
@@ -212,7 +270,7 @@ function GroupsPage() {
             })}
           </div>
         )}
-      </section>
+      </section> */}
     </main>
   );
 }

@@ -6,6 +6,7 @@ import {
   getGroupMembers,
   getGroupRanking,
   updateGroupSpecialPredictions,
+  requestJoinGroup,
   type Group,
 } from "@/lib/store";
 import { Flag } from "@/components/Flag";
@@ -16,36 +17,14 @@ export const Route = createFileRoute("/_auth/groups/$groupId")({
 
 function GroupDetailsPage() {
   const { groupId } = Route.useParams();
-
-  const [group, setGroup] = useState<Group | null>(null);
-
-  const [members, setMembers] = useState<any[]>([]);
-
-  const [ranking, setRanking] = useState<any[]>([]);
-
-  const [openBreakdown, setOpenBreakdown] = useState<Record<string, boolean>>({});
-
-  const [selectedMember, setSelectedMember] = useState<any | null>(null);
-
   const { user } = useSession();
 
-  const currentUserIsOwner = user?.id === group?.ownerId;
-
-  useEffect(() => {
-    loadGroup().catch(console.error);
-  }, [groupId]);
-
-  async function loadGroup() {
-    const data = await getGroupById(groupId);
-
-    const users = await getGroupMembers(groupId);
-
-    const rank = await getGroupRanking(groupId);
-
-    setGroup(data);
-    setMembers(users);
-    setRanking(rank);
-  }
+  const [group, setGroup] = useState<Group | null>(null);
+  const [members, setMembers] = useState<any[]>([]);
+  const [ranking, setRanking] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [requesting, setRequesting] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<any | null>(null);
 
   const specialLabels: Record<string, string> = {
     champion: "Campeão",
@@ -58,58 +37,162 @@ function GroupDetailsPage() {
     surprise_team: "Seleção surpresa",
   };
 
+  async function loadGroup() {
+    setLoading(true);
+
+    const data = await getGroupById(groupId);
+    const users = await getGroupMembers(groupId);
+    const rank = await getGroupRanking(groupId);
+
+    setGroup(data);
+    setMembers(users);
+    setRanking(rank);
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    loadGroup().catch((error) => {
+      console.error(error);
+      setLoading(false);
+    });
+  }, [groupId]);
+
+  const currentMember = members.find((member: any) => member.user_id === user?.id);
+  const isMember = !!currentMember;
+  const currentUserIsOwner = user?.id === group?.ownerId;
+
+  if (!user) return null;
+
+  if (loading) {
+    return (
+      <main className="mx-auto max-w-6xl px-4 py-8">
+        <p className="text-muted-foreground">Carregando grupo...</p>
+      </main>
+    );
+  }
+
+  if (!group) {
+    return (
+      <main className="mx-auto max-w-6xl px-4 py-8">
+        <Link to="/groups" className="text-sm text-muted-foreground hover:text-foreground">
+          ← Voltar aos grupos
+        </Link>
+
+        <h1 className="mt-6 font-display text-4xl">Grupo não encontrado</h1>
+      </main>
+    );
+  }
+
+  if (!isMember) {
+    return (
+      <main className="mx-auto max-w-6xl px-4 py-8 space-y-8">
+        <Link
+          to="/groups"
+          className="inline-flex items-center gap-2 rounded-lg border border-border bg-card/50 px-4 py-2 text-sm text-muted-foreground transition hover:bg-card hover:text-foreground"
+        >
+          ← Voltar aos grupos
+        </Link>
+
+        <div>
+          <h1 className="font-display text-5xl">{group.name}</h1>
+
+          <p className="mt-2 text-muted-foreground">{group.description}</p>
+        </div>
+
+        <section className="rounded-2xl border bg-card p-8">
+          <h2 className="text-2xl font-semibold">Você ainda não participa deste grupo</h2>
+
+          <p className="mt-2 text-muted-foreground">
+            Solicite entrada para acompanhar o ranking e participar deste bolão.
+          </p>
+
+          <button
+            type="button"
+            disabled={requesting}
+            onClick={async () => {
+              try {
+                setRequesting(true);
+
+                await requestJoinGroup(group.id, user.id);
+
+                alert("Solicitação enviada");
+              } catch (error) {
+                console.error(error);
+                alert("Não foi possível enviar a solicitação.");
+              } finally {
+                setRequesting(false);
+              }
+            }}
+            className="mt-5 rounded-lg bg-primary px-4 py-2 text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {requesting ? "Enviando..." : "Solicitar entrada"}
+          </button>
+        </section>
+      </main>
+    );
+  }
+
   return (
     <main className="mx-auto max-w-6xl px-4 py-8 space-y-8">
       <Link
         to="/groups"
-        className="
-                    inline-flex items-center gap-2
-                    rounded-lg border border-border
-                    bg-card/50 px-4 py-2 text-sm
-                    text-muted-foreground transition
-                    hover:bg-card hover:text-foreground"
+        className="inline-flex items-center gap-2 rounded-lg border border-border bg-card/50 px-4 py-2 text-sm text-muted-foreground transition hover:bg-card hover:text-foreground"
       >
         ← Voltar aos grupos
       </Link>
 
       <div>
-        <h1 className="font-display text-5xl">{group?.name || "Carregando..."}</h1>
+        <h1 className="font-display text-5xl">{group.name}</h1>
 
-        <p className="mt-2 text-muted-foreground">{group?.description}</p>
+        <p className="mt-2 text-muted-foreground">{group.description}</p>
 
-        <section className="rounded-2xl border bg-card p-6">
-          <h2 className="text-2xl font-semibold">Configurações do grupo</h2>
-
-          <div className="mt-4 flex items-center justify-between rounded-xl border border-border p-4">
-            <div>
-              <div className="font-medium">Apostas especiais</div>
-
-              <p className="text-sm text-muted-foreground">
-                Define se apostas especiais valem neste grupo.
-              </p>
-            </div>
-
+        {currentUserIsOwner && (
+          <div className="mt-4 flex gap-3">
             <button
               type="button"
-              disabled={!currentUserIsOwner}
               onClick={async () => {
-                if (!group) return;
+                await navigator.clipboard.writeText(`${window.location.origin}/groups/${groupId}`);
 
-                await updateGroupSpecialPredictions(group.id, !group.enableSpecialPredictions);
-
-                await loadGroup();
+                alert("Convite copiado");
               }}
-              className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                group?.enableSpecialPredictions
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground"
-              } disabled:cursor-not-allowed disabled:opacity-50`}
+              className="rounded-lg border border-border px-4 py-2 text-sm transition hover:bg-muted"
             >
-              {group?.enableSpecialPredictions ? "Ativadas" : "Desativadas"}
+              Copiar convite
             </button>
           </div>
-        </section>
+        )}
       </div>
+
+      <section className="rounded-2xl border bg-card p-6">
+        <h2 className="text-2xl font-semibold">Configurações do grupo</h2>
+
+        <div className="mt-4 flex items-center justify-between rounded-xl border border-border p-4">
+          <div>
+            <div className="font-medium">Apostas especiais</div>
+
+            <p className="text-sm text-muted-foreground">
+              Define se apostas especiais valem neste grupo.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            disabled={!currentUserIsOwner}
+            onClick={async () => {
+              await updateGroupSpecialPredictions(group.id, !group.enableSpecialPredictions);
+
+              await loadGroup();
+            }}
+            className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+              group.enableSpecialPredictions
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground"
+            } disabled:cursor-not-allowed disabled:opacity-50`}
+          >
+            {group.enableSpecialPredictions ? "Ativadas" : "Desativadas"}
+          </button>
+        </div>
+      </section>
 
       <section className="rounded-2xl border bg-card p-6">
         <h2 className="text-2xl font-semibold">Regras de pontuação</h2>
@@ -128,11 +211,38 @@ function GroupDetailsPage() {
           <div className="rounded-xl border border-border p-4">
             <div className="text-lg font-semibold text-primary">Especiais</div>
             <p className="text-sm text-muted-foreground">
-              {group?.enableSpecialPredictions ? "Valem neste grupo." : "Não valem neste grupo."}
+              {group.enableSpecialPredictions ? "Valem neste grupo." : "Não valem neste grupo."}
             </p>
           </div>
         </div>
       </section>
+
+      <section className="rounded-2xl border bg-card p-6">
+        <h2 className="text-2xl font-semibold">Participantes</h2>
+
+        <div className="mt-5 space-y-3">
+          {members.map((member: any) => (
+            <div
+              key={member.user_id}
+              className="flex items-center justify-between rounded-xl border border-border p-4"
+            >
+              <div>
+                <div className="font-medium">
+                  {member.role === "owner" ? "👑 " : "⚽ "}
+                  {member.profile?.name}
+                </div>
+
+                <div className="text-sm text-muted-foreground">{member.profile?.email}</div>
+              </div>
+
+              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">
+                {member.role === "owner" ? "Dono" : "Participante"}
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+
       <section className="rounded-2xl border bg-card p-6">
         <h2 className="text-2xl font-semibold">🏆 Ranking</h2>
 
@@ -142,203 +252,38 @@ function GroupDetailsPage() {
           {ranking.map((member: any, index: number) => (
             <div
               key={member.user_id}
-              className="
-                                flex items-center
-                                justify-between
-                                rounded-xl
-                                border
-                                p-4
-                                "
+              className="flex items-center justify-between rounded-xl border border-border p-4"
             >
               <div className="flex gap-3">
-                <div
-                  className="
-                                    flex h-8 w-8
-                                    items-center
-                                    justify-center
-                                    rounded-full
-                                    bg-primary/10
-                                    text-primary
-                                    "
-                >
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
                   {index + 1}º
                 </div>
 
                 <div>
                   <div className="font-medium">{member.profile?.name}</div>
 
-                  <div
-                    className="
-                                        text-sm
-                                        text-muted-foreground
-                                        "
-                  >
+                  <div className="text-sm text-muted-foreground">
                     {member.role === "owner" ? "Dono" : "Participante"}
-
-                    <div
-                      className="
-                        mt-2
-                        space-y-1
-                        text-xs
-                        text-muted-foreground
-                        "
-                    >
-                      {member.breakdown?.length > 0 && (
-                        <div className="mt-3">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedMember(member)}
-                            className="rounded-md border border-border px-3 py-1 text-xs text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                          >
-                            Ver histórico de palpites
-                          </button>
-
-                          {/* {openBreakdown[member.user_id] && (
-                            <div
-                              className="
-mt-3
-space-y-2
-rounded-lg
-border
-border-border
-bg-background/40
-p-3
-"
-                            >
-                              {member.breakdown.map((b: any) => (
-                                <div
-                                  key={b.matchId}
-                                  className="
-flex
-flex-col
-gap-2
-rounded-md
-border-b
-border-border/40
-pb-2
-text-xs
-
-md:flex-row
-md:items-center
-md:justify-between
-"
-                                >
-                                  <div
-                                    className="
-flex
-items-center
-gap-2
-font-medium
-text-sm
-"
-                                  >
-                                    {b.home?.code && (
-                                      <Flag code={b.home.code} className="h-4 w-6" />
-                                    )}
-
-                                    {b.away?.code && (
-                                      <Flag code={b.away.code} className="h-4 w-6" />
-                                    )}
-                                  </div>
-
-                                  <span>
-                                    Palpite:
-                                    <b className="ml-1">{b.predicted}</b>
-                                  </span>
-
-                                  <span>
-                                    Oficial:
-                                    <b className="ml-1">{b.official}</b>
-                                  </span>
-
-                                  <span
-                                    className="
-text-muted-foreground
-"
-                                  >
-                                    {b.reason}
-                                  </span>
-
-                                  <span
-                                    className="
-font-semibold
-text-primary
-"
-                                  >
-                                    +{b.points} pts
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          )} */}
-                        </div>
-                      )}
-                    </div>
                   </div>
+
+                  {member.breakdown?.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedMember(member)}
+                      className="mt-3 rounded-md border border-border px-3 py-1 text-xs text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                    >
+                      Ver histórico de palpites ({member.breakdown.length})
+                    </button>
+                  )}
                 </div>
               </div>
 
-              <div
-                className="
-                                text-lg
-                                font-semibold
-                                text-primary
-                                "
-              >
-                {member.points}
-                pts
-              </div>
+              <div className="text-lg font-semibold text-primary">{member.points}pts</div>
             </div>
           ))}
         </div>
       </section>
-      <section className="rounded-2xl border bg-card p-6">
-        <h2 className="text-2xl font-semibold">Participantes</h2>
 
-        <div className="mt-5 space-y-3">
-          {members.length === 0 && <p className="text-muted-foreground">Nenhum participante</p>}
-
-          {members.map((member: any) => (
-            <div
-              key={member.profile?.id}
-              className="
-                                flex items-center
-                                justify-between
-                                rounded-xl
-                                border border-border
-                                p-4
-                            "
-            >
-              <div>
-                <div className="font-medium">
-                  {member.role === "owner" ? "👑 " : "⚽ "}
-
-                  {member.profile?.name}
-                </div>
-
-                <div
-                  className="
-                                    text-sm
-                                    text-muted-foreground"
-                >
-                  {member.profile?.email}
-                </div>
-              </div>
-
-              <span
-                className="
-                                rounded-full
-                                bg-primary/10
-                                px-3 py-1
-                                text-xs
-                                text-primary"
-              >
-                {member.role === "owner" ? "Dono" : "Participante"}
-              </span>
-            </div>
-          ))}
-        </div>
-      </section>
       {selectedMember && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/50">
           <aside className="h-full w-full max-w-md overflow-y-auto border-l border-border bg-background p-6 shadow-2xl">
@@ -359,9 +304,9 @@ text-primary
             </div>
 
             <div className="mt-6 space-y-3">
-              {selectedMember.breakdown?.map((b: any) => (
+              {selectedMember.breakdown?.map((b: any, index: number) => (
                 <div
-                  key={`${b.matchId}-${b.reason}`}
+                  key={`${b.matchId}-${b.reason}-${index}`}
                   className="rounded-xl border border-border bg-card p-4"
                 >
                   <div className="mb-2 flex items-center justify-between">
@@ -369,7 +314,9 @@ text-primary
                       {b.type === "match" ? (
                         <>
                           {b.home?.code && <Flag code={b.home.code} className="h-4 w-6" />}
+
                           <span>vs</span>
+
                           {b.away?.code && <Flag code={b.away.code} className="h-4 w-6" />}
                         </>
                       ) : (
@@ -384,10 +331,12 @@ text-primary
                     <p>
                       Palpite: <b className="text-foreground">{b.predicted}</b>
                     </p>
+
                     <p>
                       Oficial: <b className="text-foreground">{b.official}</b>
                     </p>
-                    {/* <p>{b.reason}</p> */}
+
+                    {b.type === "match" && <p>{b.reason}</p>}
                   </div>
                 </div>
               ))}
