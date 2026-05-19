@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { MATCHES, TEAMS } from "@/lib/data/matches";
 
 const ADMIN_EMAIL = "cavalheiro.dev@gmail.com";
 
@@ -422,6 +423,7 @@ export interface Group {
   description?: string;
   ownerId: string;
   createdAt: string;
+  enableSpecialPredictions: boolean;
 }
 
 export async function createGroup(ownerId: string, name: string, description = "") {
@@ -460,6 +462,7 @@ export async function getGroups(): Promise<Group[]> {
     description: g.description,
     ownerId: g.owner_id,
     createdAt: g.created_at,
+    enableSpecialPredictions: g.enable_special_predictions,
   }));
 }
 
@@ -579,7 +582,21 @@ export async function getGroupById(groupId: string): Promise<Group | null> {
     description: data.description,
     ownerId: data.owner_id,
     createdAt: data.created_at,
+    enableSpecialPredictions: data.enable_special_predictions,
   };
+}
+
+export async function updateGroupSpecialPredictions(groupId: string, enabled: boolean) {
+  const { error } = await supabase
+    .from("groups")
+    .update({
+      enable_special_predictions: enabled,
+    })
+    .eq("id", groupId);
+
+  if (error) throw error;
+
+  notify();
 }
 
 export async function getGroupMembers(groupId: string) {
@@ -610,6 +627,10 @@ export async function getGroupMembers(groupId: string) {
 export async function getGroupRanking(groupId: string) {
   const members = await getGroupMembers(groupId);
 
+  const group = await getGroupById(groupId);
+
+  const specialEnabled = group?.enableSpecialPredictions ?? true;
+
   const userIds = members.map((m) => m.user_id);
 
   const { data: predictions } = await supabase
@@ -619,8 +640,23 @@ export async function getGroupRanking(groupId: string) {
 
   const { data: results } = await supabase.from("match_results").select("*");
 
+  const { data: specialPredictions } = await supabase
+
+    .from("special_predictions")
+
+    .select("*")
+
+    .in("user_id", userIds);
+
+  const { data: specialResults } = await supabase
+
+    .from("special_results")
+
+    .select("*");
+
   const ranking = members.map((member) => {
     let points = 0;
+    let specialPoints = 0;
 
     const breakdown: any[] = [];
 
@@ -641,26 +677,93 @@ export async function getGroupRanking(groupId: string) {
 
         const winnerReal = Math.sign(result.home_score - result.away_score);
 
-        if (exact) gained = 5;
-        else if (winnerPred === winnerReal) gained = 3;
+        if (exact) {
+          gained = 10;
+        } else if (winnerPred === winnerReal) {
+          gained = 5;
+        }
 
         points += gained;
 
+        const match = MATCHES.find((m) => m.id === pred.match_id);
+
         breakdown.push({
           matchId: pred.match_id,
+
+          home: match ? TEAMS[match.home] : null,
+
+          away: match ? TEAMS[match.away] : null,
 
           predicted: `${pred.home_score}x${pred.away_score}`,
 
           official: `${result.home_score}x${result.away_score}`,
 
           points: gained,
+
+          reason: exact
+            ? "Placar exato"
+            : winnerPred === winnerReal
+              ? "Resultado correto"
+              : "Errou",
+
+          type: "match",
         });
       });
 
+    if (specialEnabled) {
+      specialPredictions
+
+        ?.filter((s) => s.user_id === member.user_id)
+
+        .forEach((pred) => {
+          const result = specialResults?.find((r) => r.category === pred.category);
+
+          if (!result) return;
+
+          let gained = 0;
+
+          if (pred.prediction?.toLowerCase() === result.result?.toLowerCase()) {
+            switch (pred.category) {
+              case "champion":
+                gained = 25;
+                break;
+
+              case "runner_up":
+                gained = 15;
+                break;
+
+              case "third_place":
+                gained = 10;
+                break;
+
+              default:
+                gained = 10;
+            }
+          }
+
+          specialPoints += gained;
+
+          breakdown.push({
+            matchId: `Especial`,
+
+            predicted: pred.prediction,
+
+            official: result.result,
+
+            points: gained,
+
+            reason: pred.category,
+          });
+        });
+    }
     return {
       ...member,
 
-      points,
+      points: points + specialPoints,
+
+      normalPoints: points,
+
+      specialPoints,
 
       breakdown,
     };
@@ -688,6 +791,22 @@ export async function saveMatchResult(matchId: string, home: number, away: numbe
       onConflict: "match_id",
     },
   );
+
+  if (error) throw error;
+}
+
+export async function getSpecialResults() {
+  const { data, error } = await supabase.from("special_results").select("*");
+
+  if (error) throw error;
+
+  return data ?? [];
+}
+
+export async function saveSpecialResult(category: string, result: string) {
+  const { error } = await supabase
+    .from("special_results")
+    .upsert({ category, result }, { onConflict: "category" });
 
   if (error) throw error;
 }

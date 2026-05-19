@@ -1,13 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import {
-  MATCHES,
-  TEAMS,
-  GROUPS,
-  STAGES,
-  type Group,
-  type Match,
-} from "@/lib/data/matches";
+import { MATCHES, TEAMS, GROUPS, STAGES, type Group, type Match } from "@/lib/data/matches";
 import {
   getStageState,
   getUserBets,
@@ -34,6 +27,9 @@ const fmtBR = new Intl.DateTimeFormat("pt-BR", {
 });
 
 const SPECIALS = [
+  { id: "champion", label: "Campeão" },
+  { id: "runner_up", label: "2º colocado" },
+  { id: "third_place", label: "3º colocado" },
   { id: "golden_boot", label: "Chuteira de Ouro" },
   { id: "golden_ball", label: "Bola de Ouro" },
   { id: "golden_glove", label: "Luva de Ouro" },
@@ -63,11 +59,8 @@ function BetsPage() {
 
       setSpecialInputs(
         Object.fromEntries(
-          Object.entries(data).map(([key, value]: any) => [
-            key,
-            value.prediction,
-          ])
-        )
+          Object.entries(data).map(([key, value]: any) => [key, value.prediction]),
+        ),
       );
     });
   }, [user]);
@@ -115,19 +108,12 @@ function BetsPage() {
         </Chip>
 
         {(Object.keys(GROUPS) as Group[]).map((g) => (
-          <Chip
-            key={g}
-            active={activeGroup === g}
-            onClick={() => setActiveGroup(g)}
-          >
+          <Chip key={g} active={activeGroup === g} onClick={() => setActiveGroup(g)}>
             Grupo {g}
           </Chip>
         ))}
 
-        <Chip
-          active={activeGroup === "SPECIALS"}
-          onClick={() => setActiveGroup("SPECIALS")}
-        >
+        <Chip active={activeGroup === "SPECIALS"} onClick={() => setActiveGroup("SPECIALS")}>
           Especiais
         </Chip>
       </div>
@@ -201,9 +187,7 @@ function BetsPage() {
         <section className="mt-12 rounded-xl border border-border bg-card p-5">
           <h3 className="font-display text-3xl">Especiais</h3>
 
-          <p className="mt-1 text-sm text-muted-foreground">
-            Palpites especiais da Copa.
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">Palpites especiais da Copa.</p>
 
           <div className="mt-5 grid gap-4 md:grid-cols-2">
             {SPECIALS.map((item) => {
@@ -212,10 +196,7 @@ function BetsPage() {
               const dirty = value.trim() !== (saved?.prediction ?? "");
 
               return (
-                <div
-                  key={item.id}
-                  className="rounded-xl border border-border bg-background/40 p-4"
-                >
+                <div key={item.id} className="rounded-xl border border-border bg-background/40 p-4">
                   <label className="font-medium">{item.label}</label>
 
                   <input
@@ -235,8 +216,7 @@ function BetsPage() {
                     <span className="text-muted-foreground">
                       {saved ? (
                         <>
-                          Salvo:{" "}
-                          <b className="text-foreground">{saved.prediction}</b>
+                          Salvo: <b className="text-foreground">{saved.prediction}</b>
                         </>
                       ) : (
                         "Sem palpite ainda"
@@ -289,10 +269,11 @@ function BetsPage() {
           {STAGES.filter((s) => s.id !== "group").map((s) => (
             <span
               key={s.id}
-              className={`rounded-full border px-3 py-1 text-xs ${stageOpen[s.id]
+              className={`rounded-full border px-3 py-1 text-xs ${
+                stageOpen[s.id]
                   ? "border-primary text-primary"
                   : "border-border text-muted-foreground"
-                }`}
+              }`}
             >
               {s.label} {stageOpen[s.id] ? "· aberta" : "· bloqueada"}
             </span>
@@ -306,15 +287,11 @@ function BetsPage() {
 function StageBadge({ open }: { open: boolean }) {
   return (
     <span
-      className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium ${open
-          ? "bg-primary/15 text-primary"
-          : "bg-destructive/15 text-destructive"
-        }`}
+      className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium ${
+        open ? "bg-primary/15 text-primary" : "bg-destructive/15 text-destructive"
+      }`}
     >
-      <span
-        className={`h-2 w-2 rounded-full ${open ? "bg-primary" : "bg-destructive"
-          }`}
-      />
+      <span className={`h-2 w-2 rounded-full ${open ? "bg-primary" : "bg-destructive"}`} />
       {open ? "Apostas abertas" : "Apostas encerradas"}
     </span>
   );
@@ -332,10 +309,9 @@ function Chip({
   return (
     <button
       onClick={onClick}
-      className={`rounded-full px-3 py-1.5 text-sm transition ${active
-          ? "bg-primary text-primary-foreground"
-          : "bg-muted text-foreground hover:bg-muted/80"
-        }`}
+      className={`rounded-full px-3 py-1.5 text-sm transition ${
+        active ? "bg-primary text-primary-foreground" : "bg-muted text-foreground hover:bg-muted/80"
+      }`}
     >
       {children}
     </button>
@@ -360,8 +336,7 @@ function MatchCard({
   const [a, setA] = useState<string>(bet ? String(bet.awayScore) : "");
 
   const dirty =
-    h !== (bet ? String(bet.homeScore) : "") ||
-    a !== (bet ? String(bet.awayScore) : "");
+    h !== (bet ? String(bet.homeScore) : "") || a !== (bet ? String(bet.awayScore) : "");
 
   const canSave = h !== "" && a !== "" && !disabled && dirty;
 
@@ -417,17 +392,10 @@ function MatchCard({
   );
 }
 
-function TeamSide({
-  team,
-  reverse,
-}: {
-  team: { name: string; code: string };
-  reverse?: boolean;
-}) {
+function TeamSide({ team, reverse }: { team: { name: string; code: string }; reverse?: boolean }) {
   return (
     <div
-      className={`flex flex-1 items-center gap-2 ${reverse ? "flex-row-reverse text-right" : ""
-        }`}
+      className={`flex flex-1 items-center gap-2 ${reverse ? "flex-row-reverse text-right" : ""}`}
     >
       <Flag code={team.code} />
       <span className="truncate text-sm font-medium">{team.name}</span>
@@ -449,9 +417,7 @@ function ScoreInput({
       inputMode="numeric"
       value={value}
       disabled={disabled}
-      onChange={(e) =>
-        onChange(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))
-      }
+      onChange={(e) => onChange(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))}
       className="h-10 w-12 rounded-md border border-border bg-input/40 text-center text-lg font-semibold outline-none focus:border-primary disabled:opacity-50"
       placeholder="-"
     />
