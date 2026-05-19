@@ -11,6 +11,7 @@ import {
 } from "@/lib/store";
 import { Flag } from "@/components/Flag";
 import { TEAMS } from "@/lib/data/matches";
+import { PLAYERS } from "@/lib/data/players";
 
 export const Route = createFileRoute("/_auth/groups/$groupId")({
   component: GroupDetailsPage,
@@ -131,6 +132,20 @@ function GroupDetailsPage() {
         </section>
       </main>
     );
+  }
+
+  function getSpecialDisplayValue(value?: string) {
+    if (!value) return "";
+
+    const team = Object.values(TEAMS).find((t) => t.code === value);
+
+    if (team) return team.name;
+
+    const player = PLAYERS.find((p) => p.id === value);
+
+    if (player) return player.name;
+
+    return value;
   }
 
   return (
@@ -331,12 +346,12 @@ function GroupDetailsPage() {
                   <div className="space-y-1 text-sm text-muted-foreground">
                     <p>
                       Palpite:{" "}
-                      <b className="text-foreground">{TEAMS[b.predicted]?.name ?? b.predicted}</b>
+                      <b className="text-foreground">{getSpecialDisplayValue(b.predicted)}</b>
                     </p>
 
                     <p>
                       Oficial:{" "}
-                      <b className="text-foreground">{TEAMS[b.official]?.name ?? b.official}</b>
+                      <b className="text-foreground">{getSpecialDisplayValue(b.official)}</b>
                     </p>
 
                     {b.type === "match" && <p>{b.reason}</p>}
