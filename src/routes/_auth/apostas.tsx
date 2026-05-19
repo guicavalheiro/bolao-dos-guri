@@ -338,7 +338,8 @@ function MatchCard({
   const dirty =
     h !== (bet ? String(bet.homeScore) : "") || a !== (bet ? String(bet.awayScore) : "");
 
-  const canSave = h !== "" && a !== "" && !disabled && dirty;
+  const matchStarted = new Date() >= new Date(match.dateBR);
+  const canSave = h !== "" && a !== "" && !disabled && !matchStarted && dirty;
 
   function save() {
     const hn = Math.max(0, Math.min(20, parseInt(h, 10) || 0));
@@ -358,9 +359,9 @@ function MatchCard({
         <TeamSide team={home} />
 
         <div className="flex items-center gap-1.5">
-          <ScoreInput value={h} onChange={setH} disabled={disabled} />
+          <ScoreInput value={h} onChange={setH} disabled={disabled || matchStarted} />
           <span className="text-muted-foreground">×</span>
-          <ScoreInput value={a} onChange={setA} disabled={disabled} />
+          <ScoreInput value={a} onChange={setA} disabled={disabled || matchStarted} />
         </div>
 
         <TeamSide team={away} reverse />
@@ -385,7 +386,7 @@ function MatchCard({
           disabled={!canSave}
           className="rounded-md bg-primary px-3 py-1 font-medium text-primary-foreground transition disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {bet ? "Atualizar" : "Salvar"}
+          {matchStarted ? "Encerrado" : bet ? "Atualizar" : "Salvar"}
         </button>
       </div>
     </article>

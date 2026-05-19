@@ -1,4 +1,4 @@
-export type Group = "A"|"B"|"C"|"D"|"E"|"F"|"G"|"H"|"I"|"J"|"K"|"L";
+export type Group = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "L";
 
 export interface Team {
   name: string;
@@ -7,71 +7,71 @@ export interface Team {
 }
 
 export const TEAMS: Record<string, Team> = {
-  "Mexico":           { name: "México", code: "mx", group: "A" },
-  "South Africa":     { name: "África do Sul", code: "za", group: "A" },
-  "Korea Republic":   { name: "Coreia do Sul", code: "kr", group: "A" },
-  "Czechia":          { name: "Tchéquia", code: "cz", group: "A" },
-  "Canada":           { name: "Canadá", code: "ca", group: "B" },
-  "Bosnia-Herzegovina":{ name: "Bósnia-Herzegovina", code: "ba", group: "B" },
-  "Qatar":            { name: "Catar", code: "qa", group: "B" },
-  "Switzerland":      { name: "Suíça", code: "ch", group: "B" },
-  "Brazil":           { name: "Brasil", code: "br", group: "C" },
-  "Morocco":          { name: "Marrocos", code: "ma", group: "C" },
-  "Haiti":            { name: "Haiti", code: "ht", group: "C" },
-  "Scotland":         { name: "Escócia", code: "gb-sct", group: "C" },
-  "United States":    { name: "Estados Unidos", code: "us", group: "D" },
-  "Paraguay":         { name: "Paraguai", code: "py", group: "D" },
-  "Australia":        { name: "Austrália", code: "au", group: "D" },
-  "Türkiye":          { name: "Turquia", code: "tr", group: "D" },
-  "Germany":          { name: "Alemanha", code: "de", group: "E" },
-  "Curaçao":          { name: "Curaçao", code: "cw", group: "E" },
-  "Côte d'Ivoire":    { name: "Costa do Marfim", code: "ci", group: "E" },
-  "Ecuador":          { name: "Equador", code: "ec", group: "E" },
-  "Netherlands":      { name: "Holanda", code: "nl", group: "F" },
-  "Japan":            { name: "Japão", code: "jp", group: "F" },
-  "Sweden":           { name: "Suécia", code: "se", group: "F" },
-  "Tunisia":          { name: "Tunísia", code: "tn", group: "F" },
-  "Belgium":          { name: "Bélgica", code: "be", group: "G" },
-  "Egypt":            { name: "Egito", code: "eg", group: "G" },
-  "IR Iran":          { name: "Irã", code: "ir", group: "G" },
-  "New Zealand":      { name: "Nova Zelândia", code: "nz", group: "G" },
-  "Spain":            { name: "Espanha", code: "es", group: "H" },
-  "Cape Verde":       { name: "Cabo Verde", code: "cv", group: "H" },
-  "Saudi Arabia":     { name: "Arábia Saudita", code: "sa", group: "H" },
-  "Uruguay":          { name: "Uruguai", code: "uy", group: "H" },
-  "France":           { name: "França", code: "fr", group: "I" },
-  "Senegal":          { name: "Senegal", code: "sn", group: "I" },
-  "Iraq":             { name: "Iraque", code: "iq", group: "I" },
-  "Norway":           { name: "Noruega", code: "no", group: "I" },
-  "Argentina":        { name: "Argentina", code: "ar", group: "J" },
-  "Algeria":          { name: "Argélia", code: "dz", group: "J" },
-  "Austria":          { name: "Áustria", code: "at", group: "J" },
-  "Jordan":           { name: "Jordânia", code: "jo", group: "J" },
-  "Portugal":         { name: "Portugal", code: "pt", group: "K" },
-  "Congo DR":         { name: "Congo DR", code: "cd", group: "K" },
-  "Uzbekistan":       { name: "Uzbequistão", code: "uz", group: "K" },
-  "Colombia":         { name: "Colômbia", code: "co", group: "K" },
-  "England":          { name: "Inglaterra", code: "gb-eng", group: "L" },
-  "Croatia":          { name: "Croácia", code: "hr", group: "L" },
-  "Ghana":            { name: "Gana", code: "gh", group: "L" },
-  "Panama":           { name: "Panamá", code: "pa", group: "L" },
+  Mexico: { name: "México", code: "mx", group: "A" },
+  "South Africa": { name: "África do Sul", code: "za", group: "A" },
+  "Korea Republic": { name: "Coreia do Sul", code: "kr", group: "A" },
+  Czechia: { name: "Tchéquia", code: "cz", group: "A" },
+  Canada: { name: "Canadá", code: "ca", group: "B" },
+  "Bosnia-Herzegovina": { name: "Bósnia-Herzegovina", code: "ba", group: "B" },
+  Qatar: { name: "Catar", code: "qa", group: "B" },
+  Switzerland: { name: "Suíça", code: "ch", group: "B" },
+  Brazil: { name: "Brasil", code: "br", group: "C" },
+  Morocco: { name: "Marrocos", code: "ma", group: "C" },
+  Haiti: { name: "Haiti", code: "ht", group: "C" },
+  Scotland: { name: "Escócia", code: "gb-sct", group: "C" },
+  "United States": { name: "Estados Unidos", code: "us", group: "D" },
+  Paraguay: { name: "Paraguai", code: "py", group: "D" },
+  Australia: { name: "Austrália", code: "au", group: "D" },
+  Türkiye: { name: "Turquia", code: "tr", group: "D" },
+  Germany: { name: "Alemanha", code: "de", group: "E" },
+  Curaçao: { name: "Curaçao", code: "cw", group: "E" },
+  "Côte d'Ivoire": { name: "Costa do Marfim", code: "ci", group: "E" },
+  Ecuador: { name: "Equador", code: "ec", group: "E" },
+  Netherlands: { name: "Holanda", code: "nl", group: "F" },
+  Japan: { name: "Japão", code: "jp", group: "F" },
+  Sweden: { name: "Suécia", code: "se", group: "F" },
+  Tunisia: { name: "Tunísia", code: "tn", group: "F" },
+  Belgium: { name: "Bélgica", code: "be", group: "G" },
+  Egypt: { name: "Egito", code: "eg", group: "G" },
+  "IR Iran": { name: "Irã", code: "ir", group: "G" },
+  "New Zealand": { name: "Nova Zelândia", code: "nz", group: "G" },
+  Spain: { name: "Espanha", code: "es", group: "H" },
+  "Cape Verde": { name: "Cabo Verde", code: "cv", group: "H" },
+  "Saudi Arabia": { name: "Arábia Saudita", code: "sa", group: "H" },
+  Uruguay: { name: "Uruguai", code: "uy", group: "H" },
+  France: { name: "França", code: "fr", group: "I" },
+  Senegal: { name: "Senegal", code: "sn", group: "I" },
+  Iraq: { name: "Iraque", code: "iq", group: "I" },
+  Norway: { name: "Noruega", code: "no", group: "I" },
+  Argentina: { name: "Argentina", code: "ar", group: "J" },
+  Algeria: { name: "Argélia", code: "dz", group: "J" },
+  Austria: { name: "Áustria", code: "at", group: "J" },
+  Jordan: { name: "Jordânia", code: "jo", group: "J" },
+  Portugal: { name: "Portugal", code: "pt", group: "K" },
+  "Congo DR": { name: "Congo DR", code: "cd", group: "K" },
+  Uzbekistan: { name: "Uzbequistão", code: "uz", group: "K" },
+  Colombia: { name: "Colômbia", code: "co", group: "K" },
+  England: { name: "Inglaterra", code: "gb-eng", group: "L" },
+  Croatia: { name: "Croácia", code: "hr", group: "L" },
+  Ghana: { name: "Gana", code: "gh", group: "L" },
+  Panama: { name: "Panamá", code: "pa", group: "L" },
 };
 
 export type Stage =
   | "group"
-  | "r32"   // 16-avos
-  | "r16"   // oitavas
-  | "qf"    // quartas
-  | "sf"    // semi
+  | "r32" // 16-avos
+  | "r16" // oitavas
+  | "qf" // quartas
+  | "sf" // semi
   | "third" // disputa de 3º
   | "final";
 
 export const STAGES: { id: Stage; label: string }[] = [
   { id: "group", label: "Fase de Grupos" },
-  { id: "r32",   label: "16-avos de Final" },
-  { id: "r16",   label: "Oitavas de Final" },
-  { id: "qf",    label: "Quartas de Final" },
-  { id: "sf",    label: "Semifinais" },
+  { id: "r32", label: "16-avos de Final" },
+  { id: "r16", label: "Oitavas de Final" },
+  { id: "qf", label: "Quartas de Final" },
+  { id: "sf", label: "Semifinais" },
   { id: "third", label: "Disputa de 3º Lugar" },
   { id: "final", label: "Final" },
 ];
@@ -87,9 +87,21 @@ export interface Match {
 }
 
 // Helper to build a Brasília ISO from "YYYY-MM-DD HH:MM" (already Brasília time from user input)
-const m = (id: string, matchday: number, date: string, brTime: string, home: string, away: string, venue: string): Match => ({
-  id, stage: "group", matchday,
-  home, away, venue,
+const m = (
+  id: string,
+  matchday: number,
+  date: string,
+  brTime: string,
+  home: string,
+  away: string,
+  venue: string,
+): Match => ({
+  id,
+  stage: "group",
+  matchday,
+  home,
+  away,
+  venue,
   dateBR: `${date}T${brTime}:00-03:00`,
 });
 
