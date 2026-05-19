@@ -25,6 +25,8 @@ function GroupDetailsPage() {
 
   const [openBreakdown, setOpenBreakdown] = useState<Record<string, boolean>>({});
 
+  const [selectedMember, setSelectedMember] = useState<any | null>(null);
+
   const { user } = useSession();
 
   const currentUserIsOwner = user?.id === group?.ownerId;
@@ -44,6 +46,17 @@ function GroupDetailsPage() {
     setMembers(users);
     setRanking(rank);
   }
+
+  const specialLabels: Record<string, string> = {
+    champion: "Campeão",
+    runner_up: "2º colocado",
+    third_place: "3º colocado",
+    golden_boot: "Chuteira de Ouro",
+    golden_ball: "Bola de Ouro",
+    golden_glove: "Luva de Ouro",
+    best_young_player: "Melhor jogador jovem",
+    surprise_team: "Seleção surpresa",
+  };
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8 space-y-8">
@@ -174,20 +187,13 @@ function GroupDetailsPage() {
                         <div className="mt-3">
                           <button
                             type="button"
-                            onClick={() =>
-                              setOpenBreakdown((prev) => ({
-                                ...prev,
-                                [member.user_id]: !prev[member.user_id],
-                              }))
-                            }
+                            onClick={() => setSelectedMember(member)}
                             className="rounded-md border border-border px-3 py-1 text-xs text-muted-foreground transition hover:bg-muted hover:text-foreground"
                           >
-                            {openBreakdown[member.user_id]
-                              ? "Ocultar palpites concluídos"
-                              : `Ver palpites concluídos (${member.breakdown.length})`}
+                            Ver histórico de palpites
                           </button>
 
-                          {openBreakdown[member.user_id] && (
+                          {/* {openBreakdown[member.user_id] && (
                             <div
                               className="
 mt-3
@@ -264,7 +270,7 @@ text-primary
                                 </div>
                               ))}
                             </div>
-                          )}
+                          )} */}
                         </div>
                       )}
                     </div>
@@ -333,6 +339,62 @@ text-primary
           ))}
         </div>
       </section>
+      {selectedMember && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/50">
+          <aside className="h-full w-full max-w-md overflow-y-auto border-l border-border bg-background p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-semibold">Histórico de palpites</h2>
+
+                <p className="text-sm text-muted-foreground">{selectedMember.profile?.name}</p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelectedMember(null)}
+                className="rounded-md border border-border px-3 py-1 text-sm text-muted-foreground hover:bg-muted"
+              >
+                Fechar
+              </button>
+            </div>
+
+            <div className="mt-6 space-y-3">
+              {selectedMember.breakdown?.map((b: any) => (
+                <div
+                  key={`${b.matchId}-${b.reason}`}
+                  className="rounded-xl border border-border bg-card p-4"
+                >
+                  <div className="mb-2 flex items-center justify-between">
+                    <div className="flex items-center gap-2 font-medium">
+                      {b.type === "match" ? (
+                        <>
+                          {b.home?.code && <Flag code={b.home.code} className="h-4 w-6" />}
+                          <span>vs</span>
+                          {b.away?.code && <Flag code={b.away.code} className="h-4 w-6" />}
+                        </>
+                      ) : (
+                        <span>{specialLabels[b.reason] ?? "Especial"}</span>
+                      )}
+                    </div>
+
+                    <span className="font-semibold text-primary">+{b.points} pts</span>
+                  </div>
+
+                  <div className="space-y-1 text-sm text-muted-foreground">
+                    <p>
+                      Palpite: <b className="text-foreground">{b.predicted}</b>
+                    </p>
+                    <p>
+                      Oficial: <b className="text-foreground">{b.official}</b>
+                    </p>
+                    {/* <p>{b.reason}</p> */}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </aside>
+        </div>
+      )}
     </main>
   );
 }
