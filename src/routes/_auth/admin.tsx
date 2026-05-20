@@ -2,6 +2,7 @@ import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useSession } from "@/hooks/use-session";
 import { STAGES, MATCHES, TEAMS } from "@/lib/data/matches";
+import { PLAYERS } from "@/lib/data/players";
 import {
   getUsers,
   getBets,
@@ -121,6 +122,32 @@ function AdminPage() {
       label: "Seleção surpresa",
     },
   ];
+
+  type PlayerSpecialCategory = "golden_boot" | "golden_ball" | "golden_glove" | "best_young_player";
+
+  const PLAYER_SPECIALS: PlayerSpecialCategory[] = [
+    "golden_boot",
+    "golden_ball",
+    "golden_glove",
+    "best_young_player",
+  ];
+
+  const PLAYER_SPECIAL_FILTERS: Record<PlayerSpecialCategory, string[]> = {
+    golden_boot: ["FW", "MF", "DF"],
+    golden_ball: ["GK", "DF", "MF", "FW"],
+    golden_glove: ["GK"],
+    best_young_player: ["GK", "DF", "MF", "FW"],
+  };
+
+  function getPlayersForCategory(category: PlayerSpecialCategory) {
+    let players = PLAYERS.filter((p) => PLAYER_SPECIAL_FILTERS[category].includes(p.position));
+
+    if (category === "best_young_player") {
+      players = players.filter((p) => p.age === null || p.age <= 21);
+    }
+
+    return players;
+  }
 
   return (
     <main className="mx-auto max-w-6xl space-y-10 px-4 py-8">
@@ -284,7 +311,7 @@ function AdminPage() {
                   {TEAM_SPECIALS.includes(item.id) ? (
                     <select
                       id={`special-${item.id}`}
-                      defaultValue={TEAMS[current?.result]?.name ?? current?.result}
+                      defaultValue={current?.result ?? ""}
                       className="rounded border border-border bg-input/40 px-3 py-2 text-foreground outline-none focus:border-primary"
                     >
                       <option value="" className="bg-background text-foreground">
@@ -293,16 +320,42 @@ function AdminPage() {
 
                       {Object.entries(TEAMS)
                         .sort(([, a], [, b]) => a.name.localeCompare(b.name, "pt-BR"))
-                        .map(([code, team]) => (
-                          <option key={code} value={code} className="bg-background text-foreground">
+                        .map(([, team]) => (
+                          <option
+                            key={team.code}
+                            value={team.code}
+                            className="bg-background text-foreground"
+                          >
                             {team.name}
+                          </option>
+                        ))}
+                    </select>
+                  ) : PLAYER_SPECIALS.includes(item.id as PlayerSpecialCategory) ? (
+                    <select
+                      id={`special-${item.id}`}
+                      defaultValue={current?.result ?? ""}
+                      className="rounded border border-border bg-input/40 px-3 py-2 text-foreground outline-none focus:border-primary"
+                    >
+                      <option value="" className="bg-background text-foreground">
+                        Escolha
+                      </option>
+
+                      {getPlayersForCategory(item.id as PlayerSpecialCategory)
+                        .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"))
+                        .map((player) => (
+                          <option
+                            key={player.id}
+                            value={player.id}
+                            className="bg-background text-foreground"
+                          >
+                            {player.name}
                           </option>
                         ))}
                     </select>
                   ) : (
                     <input
                       id={`special-${item.id}`}
-                      defaultValue={TEAMS[current?.result]?.name ?? current?.result}
+                      defaultValue={current?.result ?? ""}
                       className="rounded border border-border bg-input/40 px-3 py-2 text-foreground outline-none focus:border-primary"
                     />
                   )}

@@ -660,6 +660,19 @@ export async function getGroupRanking(groupId: string) {
 
     const breakdown: any[] = [];
 
+    function normalizeSpecialValue(value: string) {
+      const clean = value?.trim().toLowerCase();
+
+      const teamEntry = Object.entries(TEAMS).find(
+        ([key, team]) =>
+          key.toLowerCase() === clean ||
+          team.code.toLowerCase() === clean ||
+          team.name.toLowerCase() === clean,
+      );
+
+      return teamEntry ? teamEntry[1].code : clean;
+    }
+
     predictions
       ?.filter((p) => p.user_id === member.user_id)
 
@@ -722,7 +735,7 @@ export async function getGroupRanking(groupId: string) {
 
           let gained = 0;
 
-          if (pred.prediction?.toLowerCase() === result.result?.toLowerCase()) {
+          if (normalizeSpecialValue(pred.prediction) === normalizeSpecialValue(result.result)) {
             switch (pred.category) {
               case "champion":
                 gained = 25;
