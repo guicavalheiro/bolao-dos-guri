@@ -276,6 +276,17 @@ function BetsPage() {
 
           <p className="mt-1 text-sm text-muted-foreground">Palpites especiais da Copa.</p>
 
+          <div className="mt-4 rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4 text-sm">
+            <div className="font-medium text-yellow-200">
+              ⚠️ Apostas especiais de jogadores ainda estão incompletas
+            </div>
+
+            <p className="mt-1 text-muted-foreground">
+              Algumas seleções ainda não divulgaram suas convocações finais. Por isso, as opções de
+              jogadores podem ser atualizadas até o início da Copa.
+            </p>
+          </div>
+
           <div className="mt-5 grid gap-4 md:grid-cols-2">
             {SPECIALS.map((item) => {
               const saved = specials[item.id];
