@@ -46,6 +46,7 @@ function BetsPage() {
   const [activeGroup, setActiveGroup] = useState<Group | "ALL" | "SPECIALS">("ALL");
   const [specials, setSpecials] = useState<Record<string, any>>({});
   const [specialInputs, setSpecialInputs] = useState<Record<string, string>>({});
+  const [specialTeams, setSpecialTeams] = useState<Record<string, string>>({});
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => subscribe(() => force((x) => x + 1)), []);
@@ -134,6 +135,14 @@ function BetsPage() {
       players = players.filter((p) => p.age === null || p.age <= 21);
     }
 
+    return players;
+  }
+
+  function getPlayersForCategoryAndTeam(category: PlayerSpecialCategory, teamCode: string) {
+    const players = getPlayersForCategory(category)
+      .filter((p) => !teamCode || p.team === teamCode)
+
+      .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
     return players;
   }
 
@@ -309,24 +318,54 @@ function BetsPage() {
                         ))}
                     </select>
                   ) : PLAYER_SPECIALS.includes(item.id as PlayerSpecialCategory) ? (
-                    <select
-                      value={value}
-                      disabled={!groupOpen}
-                      onChange={(e) =>
-                        setSpecialInputs((prev) => ({
-                          ...prev,
-                          [item.id]: e.target.value,
-                        }))
-                      }
-                      className="mt-2 w-full rounded-md border border-border bg-input/40 px-3 py-2 text-foreground outline-none focus:border-primary disabled:opacity-50"
-                    >
-                      <option value="" className="bg-background text-foreground">
-                        Escolha
-                      </option>
+                    <div className="space-y-2">
+                      <select
+                        value={specialTeams[item.id] ?? ""}
+                        disabled={!groupOpen}
+                        onChange={(e) =>
+                          setSpecialTeams((prev) => ({
+                            ...prev,
+                            [item.id]: e.target.value,
+                          }))
+                        }
+                        className="w-full rounded-md border border-border bg-input/40 px-3 py-2 text-foreground outline-none focus:border-primary disabled:opacity-50"
+                      >
+                        <option value="" className="bg-background text-foreground">
+                          Seleção
+                        </option>
 
-                      {getPlayersForCategory(item.id as PlayerSpecialCategory)
-                        .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"))
-                        .map((player) => (
+                        {Object.entries(TEAMS)
+                          .sort(([, a], [, b]) => a.name.localeCompare(b.name, "pt-BR"))
+                          .map(([, team]) => (
+                            <option
+                              key={team.code}
+                              value={team.code}
+                              className="bg-background text-foreground"
+                            >
+                              {team.name}
+                            </option>
+                          ))}
+                      </select>
+
+                      <select
+                        value={value}
+                        disabled={!groupOpen || !specialTeams[item.id]}
+                        onChange={(e) =>
+                          setSpecialInputs((prev) => ({
+                            ...prev,
+                            [item.id]: e.target.value,
+                          }))
+                        }
+                        className="w-full rounded-md border border-border bg-input/40 px-3 py-2 text-foreground outline-none focus:border-primary disabled:opacity-50"
+                      >
+                        <option value="" className="bg-background text-foreground">
+                          Jogador
+                        </option>
+
+                        {getPlayersForCategoryAndTeam(
+                          item.id as PlayerSpecialCategory,
+                          specialTeams[item.id] ?? "",
+                        ).map((player) => (
                           <option
                             key={player.id}
                             value={player.id}
@@ -335,7 +374,8 @@ function BetsPage() {
                             {player.name}
                           </option>
                         ))}
-                    </select>
+                      </select>
+                    </div>
                   ) : (
                     <input
                       value={value}

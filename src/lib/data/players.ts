@@ -6,7 +6,7 @@ export type Player = {
   id: string;
   name: string;
 
-  team: string; // BRA ARG FRA
+  team: string; // br ar fr
 
   position: PlayerPosition;
 
@@ -21,7 +21,7 @@ export const PLAYERS: Player[] = [
   {
     id: "vini_jr",
     name: "Vinícius Jr.",
-    team: "BRA",
+    team: "br",
     position: "FW",
     age: null,
     status: "confirmed",
@@ -30,7 +30,7 @@ export const PLAYERS: Player[] = [
   {
     id: "endrick",
     name: "Endrick",
-    team: "BRA",
+    team: "br",
     position: "FW",
     age: null,
     status: "confirmed",
@@ -39,7 +39,7 @@ export const PLAYERS: Player[] = [
   {
     id: "raphinha",
     name: "Raphinha",
-    team: "BRA",
+    team: "br",
     position: "FW",
     age: null,
     status: "confirmed",
@@ -48,7 +48,7 @@ export const PLAYERS: Player[] = [
   {
     id: "alisson",
     name: "Alisson",
-    team: "BRA",
+    team: "br",
     position: "GK",
     age: null,
     status: "confirmed",
@@ -59,7 +59,7 @@ export const PLAYERS: Player[] = [
   {
     id: "mbappe",
     name: "Kylian Mbappé",
-    team: "FRA",
+    team: "fr",
     position: "FW",
     age: null,
     status: "confirmed",
@@ -68,7 +68,7 @@ export const PLAYERS: Player[] = [
   {
     id: "dembele",
     name: "Ousmane Dembélé",
-    team: "FRA",
+    team: "fr",
     position: "FW",
     age: null,
     status: "confirmed",
@@ -77,7 +77,7 @@ export const PLAYERS: Player[] = [
   {
     id: "maignan",
     name: "Mike Maignan",
-    team: "FRA",
+    team: "fr",
     position: "GK",
     age: null,
     status: "confirmed",
@@ -88,7 +88,7 @@ export const PLAYERS: Player[] = [
   {
     id: "messi",
     name: "Lionel Messi",
-    team: "ARG",
+    team: "ar",
     position: "MF",
     age: null,
     status: "pre_list",
@@ -97,7 +97,7 @@ export const PLAYERS: Player[] = [
   {
     id: "lautaro",
     name: "Lautaro Martínez",
-    team: "ARG",
+    team: "ar",
     position: "FW",
     age: null,
     status: "pre_list",
