@@ -178,6 +178,9 @@ async function upsertCurrentProfile(user: User) {
 
 const STAGE_KEY = "bolao_stage_state";
 
+let cachedStageState: StageState | null = null;
+let bolaoSettingsLoaded = false;
+
 const DEFAULT_SPECIALS: SpecialsSettings = {
   enabled: true,
   deadlineBR: WORLD_CUP_START_BR,
@@ -222,6 +225,127 @@ function normalizeSpecials(raw: Partial<SpecialsSettings> | undefined): Specials
   };
 }
 
+function getDefaultStageState(): StageState {
+  return {
+    open: { ...DEFAULT_STAGE_OPEN },
+    specials: { ...DEFAULT_SPECIALS },
+  };
+}
+
+function stateFromRow(row: {
+  stage_open: Record<string, boolean>;
+  specials_enabled: boolean;
+  specials_deadline_br: string;
+}): StageState {
+  return {
+    open: normalizeStageOpen(row.stage_open ?? {}),
+    specials: normalizeSpecials({
+      enabled: row.specials_enabled,
+      deadlineBR: row.specials_deadline_br,
+    }),
+  };
+}
+
+function readLegacyLocalStageState(): StageState | null {
+  if (typeof window === "undefined") return null;
+
+  const raw = localStorage.getItem(STAGE_KEY);
+
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<StageState>;
+
+    return {
+      open: normalizeStageOpen(parsed.open ?? {}),
+      specials: normalizeSpecials(parsed.specials),
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function fetchBolaoSettingsFromSupabase(): Promise<StageState> {
+  const { data, error } = await supabase
+    .from("bolao_settings")
+    .select("stage_open, specials_enabled, specials_deadline_br")
+    .eq("id", 1)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  if (!data) return getDefaultStageState();
+
+  return stateFromRow(data);
+}
+
+async function persistBolaoSettings(state: StageState): Promise<void> {
+  const row = {
+    id: 1,
+    stage_open: state.open,
+    specials_enabled: state.specials.enabled,
+    specials_deadline_br: state.specials.deadlineBR,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error } = await supabase.from("bolao_settings").upsert(row, { onConflict: "id" });
+
+  if (error) throw error;
+
+  cachedStageState = state;
+  bolaoSettingsLoaded = true;
+  notify();
+}
+
+export function isBolaoSettingsLoaded(): boolean {
+  return bolaoSettingsLoaded;
+}
+
+export async function refreshBolaoSettings(): Promise<StageState> {
+  const state = await fetchBolaoSettingsFromSupabase();
+
+  cachedStageState = state;
+  bolaoSettingsLoaded = true;
+  notify();
+
+  return state;
+}
+
+/** Carrega configurações do Supabase (todos os usuários). Migra localStorage do admin uma vez. */
+export async function initBolaoSettings(): Promise<StageState> {
+  const legacy = readLegacyLocalStageState();
+
+  if (legacy && sessionUser?.isAdmin) {
+    try {
+      await persistBolaoSettings(legacy);
+      localStorage.removeItem(STAGE_KEY);
+    } catch (error) {
+      console.warn("Não foi possível migrar bolao_settings do localStorage:", error);
+    }
+  }
+
+  return refreshBolaoSettings();
+}
+
+export function subscribeBolaoSettingsRealtime(onUpdated: () => void) {
+  const channel = supabase
+    .channel("bolao_settings_changes")
+    .on(
+      "postgres_changes",
+      { event: "UPDATE", schema: "public", table: "bolao_settings" },
+      () => {
+        refreshBolaoSettings()
+          .then(() => onUpdated())
+          .catch((error) => console.error("Erro ao atualizar bolao_settings:", error));
+      },
+    )
+    .subscribe();
+
+  return () => {
+    void supabase.removeChannel(channel);
+  };
+}
+
 export function isStageOpen(stageId: Stage): boolean {
   return getStageState().open[stageId] ?? false;
 }
@@ -253,29 +377,17 @@ export function datetimeLocalToSpecialsDeadline(value: string): string {
 }
 
 export function getStageState(): StageState {
-  const raw = localStorage.getItem(STAGE_KEY);
-
-  if (!raw) {
-    return { open: { ...DEFAULT_STAGE_OPEN }, specials: { ...DEFAULT_SPECIALS } };
+  if (!bolaoSettingsLoaded) {
+    return getDefaultStageState();
   }
 
-  const parsed = JSON.parse(raw) as Partial<StageState>;
-
-  return {
-    open: normalizeStageOpen(parsed.open ?? {}),
-    specials: normalizeSpecials(parsed.specials),
-  };
+  return cachedStageState ?? getDefaultStageState();
 }
 
-export function setStageState(stageState: StageState) {
-  localStorage.setItem(STAGE_KEY, JSON.stringify(stageState));
-  notify();
-}
-
-export function setStageOpen(stageId: string, open: boolean) {
+export async function setStageOpen(stageId: string, open: boolean) {
   const current = getStageState();
 
-  setStageState({
+  await persistBolaoSettings({
     ...current,
     open: {
       ...current.open,
@@ -284,19 +396,19 @@ export function setStageOpen(stageId: string, open: boolean) {
   });
 }
 
-export function setSpecialsEnabled(enabled: boolean) {
+export async function setSpecialsEnabled(enabled: boolean) {
   const current = getStageState();
 
-  setStageState({
+  await persistBolaoSettings({
     ...current,
     specials: { ...current.specials, enabled },
   });
 }
 
-export function setSpecialsDeadline(deadlineBR: string) {
+export async function setSpecialsDeadline(deadlineBR: string) {
   const current = getStageState();
 
-  setStageState({
+  await persistBolaoSettings({
     ...current,
     specials: { ...current.specials, deadlineBR },
   });

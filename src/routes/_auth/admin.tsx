@@ -1,6 +1,7 @@
 import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useSession } from "@/hooks/use-session";
+import { useBolaoSettings } from "@/hooks/use-bolao-settings";
 import { STAGES, MATCHES, TEAMS } from "@/lib/data/matches";
 import { PLAYERS } from "@/lib/data/players";
 import {
@@ -29,6 +30,7 @@ export const Route = createFileRoute("/_auth/admin")({
 
 function AdminPage() {
   const { user, ready } = useSession();
+  const { ready: settingsReady } = useBolaoSettings();
 
   const [users, setUsers] = useState<User[]>([]);
 
@@ -81,6 +83,14 @@ function AdminPage() {
 
   if (!user || !user.isAdmin) {
     return <Navigate to="/apostas" />;
+  }
+
+  if (!settingsReady) {
+    return (
+      <main className="mx-auto max-w-6xl px-4 py-8">
+        <p className="text-muted-foreground">Carregando configurações...</p>
+      </main>
+    );
   }
 
   const stageState = getStageState();
@@ -237,7 +247,12 @@ function AdminPage() {
 
                 <button
                   type="button"
-                  onClick={() => setStageOpen(stage.id, !open)}
+                  onClick={() =>
+                    setStageOpen(stage.id, !open).catch((error) => {
+                      console.error(error);
+                      alert("Erro ao salvar fase. Verifique se a tabela bolao_settings existe no Supabase.");
+                    })
+                  }
                   className={`relative inline-flex h-6 w-11 rounded-full 
                     ${open ? "bg-primary" : "bg-muted"}
                   `}
@@ -272,7 +287,12 @@ function AdminPage() {
 
             <button
               type="button"
-              onClick={() => setSpecialsEnabled(!stageState.specials.enabled)}
+              onClick={() =>
+                setSpecialsEnabled(!stageState.specials.enabled).catch((error) => {
+                  console.error(error);
+                  alert("Erro ao salvar apostas especiais.");
+                })
+              }
               className={`relative inline-flex h-6 w-11 rounded-full ${
                 stageState.specials.enabled ? "bg-primary" : "bg-muted"
               }`}
@@ -295,7 +315,12 @@ function AdminPage() {
               type="datetime-local"
               value={specialsDeadlineToDatetimeLocal(stageState.specials.deadlineBR)}
               onChange={(e) =>
-                setSpecialsDeadline(datetimeLocalToSpecialsDeadline(e.target.value))
+                setSpecialsDeadline(datetimeLocalToSpecialsDeadline(e.target.value)).catch(
+                  (error) => {
+                    console.error(error);
+                    alert("Erro ao salvar prazo das apostas especiais.");
+                  },
+                )
               }
               className="mt-3 w-full max-w-xs rounded-md border border-border bg-input/40 px-3 py-2"
             />
