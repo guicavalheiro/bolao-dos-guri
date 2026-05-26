@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import { MATCHES, TEAMS, type Stage } from "@/lib/data/matches";
+import { MATCHES, TEAMS, WORLD_CUP_START_BR, type Stage } from "@/lib/data/matches";
 
 const ADMIN_EMAIL = "cavalheiro.dev@gmail.com";
 
@@ -19,8 +19,14 @@ export interface Bet {
   updatedAt: string;
 }
 
+export interface SpecialsSettings {
+  enabled: boolean;
+  deadlineBR: string;
+}
+
 export interface StageState {
   open: Record<string, boolean>;
+  specials: SpecialsSettings;
 }
 
 let sessionUser: User | null = null;
@@ -172,6 +178,11 @@ async function upsertCurrentProfile(user: User) {
 
 const STAGE_KEY = "bolao_stage_state";
 
+const DEFAULT_SPECIALS: SpecialsSettings = {
+  enabled: true,
+  deadlineBR: WORLD_CUP_START_BR,
+};
+
 const DEFAULT_STAGE_OPEN: Record<Stage, boolean> = {
   group: true,
   r32: false,
@@ -204,21 +215,55 @@ function normalizeStageOpen(raw: Record<string, boolean>): Record<Stage, boolean
   return result;
 }
 
+function normalizeSpecials(raw: Partial<SpecialsSettings> | undefined): SpecialsSettings {
+  return {
+    enabled: raw?.enabled ?? DEFAULT_SPECIALS.enabled,
+    deadlineBR: raw?.deadlineBR ?? DEFAULT_SPECIALS.deadlineBR,
+  };
+}
+
 export function isStageOpen(stageId: Stage): boolean {
   return getStageState().open[stageId] ?? false;
+}
+
+export function isSpecialsOpen(): boolean {
+  return getStageState().specials.enabled;
+}
+
+export function canEditSpecialPredictions(at = Date.now()): boolean {
+  const { enabled, deadlineBR } = getStageState().specials;
+
+  if (!enabled) return false;
+
+  return at < new Date(deadlineBR).getTime();
+}
+
+export function getSpecialsSettings(): SpecialsSettings {
+  return getStageState().specials;
+}
+
+export function specialsDeadlineToDatetimeLocal(deadlineBR: string): string {
+  return deadlineBR.slice(0, 16);
+}
+
+export function datetimeLocalToSpecialsDeadline(value: string): string {
+  if (value.length === 16) return `${value}:00-03:00`;
+
+  return value;
 }
 
 export function getStageState(): StageState {
   const raw = localStorage.getItem(STAGE_KEY);
 
   if (!raw) {
-    return { open: { ...DEFAULT_STAGE_OPEN } };
+    return { open: { ...DEFAULT_STAGE_OPEN }, specials: { ...DEFAULT_SPECIALS } };
   }
 
-  const parsed = JSON.parse(raw) as StageState;
+  const parsed = JSON.parse(raw) as Partial<StageState>;
 
   return {
     open: normalizeStageOpen(parsed.open ?? {}),
+    specials: normalizeSpecials(parsed.specials),
   };
 }
 
@@ -230,15 +275,31 @@ export function setStageState(stageState: StageState) {
 export function setStageOpen(stageId: string, open: boolean) {
   const current = getStageState();
 
-  const next = {
+  setStageState({
     ...current,
     open: {
       ...current.open,
       [stageId]: open,
     },
-  };
+  });
+}
 
-  setStageState(next);
+export function setSpecialsEnabled(enabled: boolean) {
+  const current = getStageState();
+
+  setStageState({
+    ...current,
+    specials: { ...current.specials, enabled },
+  });
+}
+
+export function setSpecialsDeadline(deadlineBR: string) {
+  const current = getStageState();
+
+  setStageState({
+    ...current,
+    specials: { ...current.specials, deadlineBR },
+  });
 }
 
 export async function saveBet(bet: Bet) {
@@ -399,6 +460,10 @@ export interface SpecialPrediction {
 }
 
 export async function saveSpecialPrediction(item: SpecialPrediction) {
+  if (!canEditSpecialPredictions()) {
+    throw new Error("As apostas especiais estão encerradas ou desativadas.");
+  }
+
   const { error } = await supabase.from("special_predictions").upsert(
     {
       user_id: item.userId,
@@ -661,7 +726,7 @@ export async function getGroupRanking(groupId: string) {
 
   const group = await getGroupById(groupId);
 
-  const specialEnabled = group?.enableSpecialPredictions ?? true;
+  const specialEnabled = (group?.enableSpecialPredictions ?? true) && isSpecialsOpen();
 
   const userIds = members.map((m) => m.user_id);
 

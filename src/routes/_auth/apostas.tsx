@@ -3,6 +3,9 @@ import { useEffect, useMemo, useState } from "react";
 import { MATCHES, TEAMS, GROUPS, STAGES, type Group, type Match, Stage } from "@/lib/data/matches";
 import {
   getUserBets,
+  canEditSpecialPredictions,
+  getSpecialsSettings,
+  isSpecialsOpen,
   isStageOpen,
   saveBet,
   subscribe,
@@ -22,6 +25,15 @@ const fmtBR = new Intl.DateTimeFormat("pt-BR", {
   weekday: "short",
   day: "2-digit",
   month: "short",
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "America/Sao_Paulo",
+});
+
+const fmtDeadlineBR = new Intl.DateTimeFormat("pt-BR", {
+  day: "2-digit",
+  month: "long",
+  year: "numeric",
   hour: "2-digit",
   minute: "2-digit",
   timeZone: "America/Sao_Paulo",
@@ -62,12 +74,22 @@ function BetsPage() {
   }, []);
 
   const groupOpen = isStageOpen("group");
+  const specialsOpen = isSpecialsOpen();
+  const specialsEditable = canEditSpecialPredictions(now);
+  const specialsSettings = getSpecialsSettings();
+  const specialsDeadlineLabel = fmtDeadlineBR.format(new Date(specialsSettings.deadlineBR));
 
   useEffect(() => {
     if (!groupOpen && (Object.keys(GROUPS) as Group[]).includes(activeGroup as Group)) {
       setActiveGroup("ALL");
     }
   }, [groupOpen, activeGroup]);
+
+  useEffect(() => {
+    if (!specialsOpen && activeGroup === "SPECIALS") {
+      setActiveGroup("ALL");
+    }
+  }, [specialsOpen, activeGroup]);
 
   useEffect(() => {
     if (!user) return;
@@ -236,9 +258,11 @@ function BetsPage() {
             </Chip>
           ))}
 
-        <Chip active={activeGroup === "SPECIALS"} onClick={() => setActiveGroup("SPECIALS")}>
-          Especiais
-        </Chip>
+        {specialsOpen && (
+          <Chip active={activeGroup === "SPECIALS"} onClick={() => setActiveGroup("SPECIALS")}>
+            Especiais
+          </Chip>
+        )}
       </div>
 
       <div className="space-y-10">
@@ -308,11 +332,24 @@ function BetsPage() {
         ))}
       </div>
 
-      {(activeGroup === "ALL" || activeGroup === "SPECIALS") && (
+      {specialsOpen && (activeGroup === "ALL" || activeGroup === "SPECIALS") && (
         <section className="mt-12 rounded-xl border border-border bg-card p-5">
           <h3 className="font-display text-3xl">Especiais</h3>
 
-          <p className="mt-1 text-sm text-muted-foreground">Palpites especiais da Copa.</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Palpites especiais da Copa. Prazo para alterar: {specialsDeadlineLabel} (horário de
+            Brasília).
+          </p>
+
+          {!specialsEditable && (
+            <div className="mt-4 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm">
+              <div className="font-medium text-destructive">Apostas especiais encerradas</div>
+              <p className="mt-1 text-muted-foreground">
+                O prazo para alterar palpites especiais terminou no início da Copa (
+                {specialsDeadlineLabel}). Seus palpites salvos permanecem válidos.
+              </p>
+            </div>
+          )}
 
           <div className="mt-4 rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4 text-sm">
             <div className="font-medium text-yellow-200">
@@ -338,7 +375,7 @@ function BetsPage() {
                   {TEAM_SPECIALS.includes(item.id) ? (
                     <select
                       value={value}
-                      disabled={!groupOpen}
+                      disabled={!specialsEditable}
                       onChange={(e) =>
                         setSpecialInputs((prev) => ({
                           ...prev,
@@ -370,7 +407,7 @@ function BetsPage() {
                     <div className="space-y-2">
                       <select
                         value={specialTeams[item.id] ?? ""}
-                        disabled={!groupOpen}
+                        disabled={!specialsEditable}
                         onChange={(e) =>
                           setSpecialTeams((prev) => ({
                             ...prev,
@@ -398,7 +435,7 @@ function BetsPage() {
 
                       <select
                         value={value}
-                        disabled={!groupOpen || !specialTeams[item.id]}
+                        disabled={!specialsEditable || !specialTeams[item.id]}
                         onChange={(e) =>
                           setSpecialInputs((prev) => ({
                             ...prev,
@@ -428,7 +465,7 @@ function BetsPage() {
                   ) : (
                     <input
                       value={value}
-                      disabled={!groupOpen}
+                      disabled={!specialsEditable}
                       onChange={(e) =>
                         setSpecialInputs((prev) => ({
                           ...prev,
@@ -457,7 +494,7 @@ function BetsPage() {
 
                     <button
                       type="button"
-                      disabled={!groupOpen || !value.trim() || !dirty}
+                      disabled={!specialsEditable || !value.trim() || !dirty}
                       onClick={async () => {
                         const updatedAt = new Date().toISOString();
 

@@ -124,6 +124,9 @@ const k = (
   dateBR: `${date}T${brTime}:00-03:00`,
 });
 
+/** Primeiro jogo da Copa — usado como deadline padrão das apostas especiais. */
+export const WORLD_CUP_START_BR = "2026-06-11T16:00:00-03:00";
+
 export const MATCHES: Match[] = [
   // MD1
   m("G1-01", 1, "2026-06-11", "16:00", "Mexico", "South Africa", "Estadio Banorte"),

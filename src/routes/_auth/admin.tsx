@@ -10,6 +10,10 @@ import {
   downloadCSV,
   getStageState,
   setStageOpen,
+  setSpecialsDeadline,
+  setSpecialsEnabled,
+  specialsDeadlineToDatetimeLocal,
+  datetimeLocalToSpecialsDeadline,
   subscribe,
   getMatchResults,
   saveMatchResult,
@@ -247,6 +251,55 @@ function AdminPage() {
               </label>
             );
           })}
+        </div>
+      </section>
+
+      <section className="rounded-xl border bg-card p-5">
+        <h3 className="font-display text-2xl">Apostas especiais</h3>
+
+        <p className="mt-1 text-sm text-muted-foreground">
+          Controle global das apostas especiais (campeão, artilheiro, etc.).
+        </p>
+
+        <div className="mt-4 space-y-4">
+          <label className="flex items-center justify-between rounded-lg border p-4">
+            <div>
+              <span className="font-medium">Apostas especiais ativas</span>
+              <p className="text-sm text-muted-foreground">
+                Quando desligado, a seção some da página de apostas.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setSpecialsEnabled(!stageState.specials.enabled)}
+              className={`relative inline-flex h-6 w-11 rounded-full ${
+                stageState.specials.enabled ? "bg-primary" : "bg-muted"
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 rounded-full bg-white transition ${
+                  stageState.specials.enabled ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+          </label>
+
+          <label className="block rounded-lg border p-4">
+            <span className="font-medium">Prazo final (horário de Brasília)</span>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Após esse horário ninguém poderá criar ou alterar palpites especiais (padrão: início
+              da Copa).
+            </p>
+            <input
+              type="datetime-local"
+              value={specialsDeadlineToDatetimeLocal(stageState.specials.deadlineBR)}
+              onChange={(e) =>
+                setSpecialsDeadline(datetimeLocalToSpecialsDeadline(e.target.value))
+              }
+              className="mt-3 w-full max-w-xs rounded-md border border-border bg-input/40 px-3 py-2"
+            />
+          </label>
         </div>
       </section>
 
