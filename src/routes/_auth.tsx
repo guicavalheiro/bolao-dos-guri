@@ -7,6 +7,7 @@ import {
 
 import { useState } from "react";
 import { useSession } from "@/hooks/use-session";
+import { BolaoSettingsProvider } from "@/hooks/use-bolao-settings";
 import { logoutUser } from "@/lib/store";
 
 export const Route = createFileRoute("/_auth")({
@@ -24,6 +25,7 @@ function AuthLayout() {
   }
 
   return (
+    <BolaoSettingsProvider userId={user.id}>
     <div className="min-h-screen">
       <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-lg">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
@@ -97,5 +99,6 @@ function AuthLayout() {
 
       <Outlet />
     </div>
+    </BolaoSettingsProvider>
   );
 }

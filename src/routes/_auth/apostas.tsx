@@ -14,6 +14,7 @@ import {
   type Bet,
 } from "@/lib/store";
 import { useSession } from "@/hooks/use-session";
+import { useBolaoSettings } from "@/hooks/use-bolao-settings";
 import { Flag } from "@/components/Flag";
 import { PLAYERS } from "@/lib/data/players";
 
@@ -52,6 +53,7 @@ const SPECIALS = [
 
 function BetsPage() {
   const { user } = useSession();
+  const { ready: settingsReady } = useBolaoSettings();
 
   const [, force] = useState(0);
   const [userBets, setUserBets] = useState<Record<string, Bet>>({});
@@ -120,6 +122,14 @@ function BetsPage() {
   }, []);
 
   if (!user) return null;
+
+  if (!settingsReady) {
+    return (
+      <main className="mx-auto max-w-6xl px-4 py-8">
+        <p className="text-muted-foreground">Carregando configurações do bolão...</p>
+      </main>
+    );
+  }
 
   type VisibleSection = Group | Stage;
 
