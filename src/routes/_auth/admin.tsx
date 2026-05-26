@@ -42,32 +42,32 @@ function AdminPage() {
 
   useEffect(() => subscribe(() => force((x) => x + 1)), []);
 
-  useEffect(() => {
-    async function loadAdminData() {
-      try {
-        setLoading(true);
+  async function loadAdminData() {
+    try {
+      setLoading(true);
 
-        const [loadedUsers, loadedBets, loadedResults, loadedSpecials] = await Promise.all([
-          getUsers(),
-          getBets(),
-          getMatchResults(),
-          getSpecialResults(),
-        ]);
+      const [loadedUsers, loadedBets, loadedResults, loadedSpecials] = await Promise.all([
+        getUsers(),
+        getBets(),
+        getMatchResults(),
+        getSpecialResults(),
+      ]);
 
-        setUsers(loadedUsers);
+      setUsers(loadedUsers);
 
-        setBets(loadedBets);
+      setBets(loadedBets);
 
-        setResults(loadedResults);
+      setResults(loadedResults);
 
-        setSpecialResults(loadedSpecials);
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
+      setSpecialResults(loadedSpecials);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
     }
+  }
 
+  useEffect(() => {
     if (user?.isAdmin) {
       loadAdminData();
     }
@@ -112,15 +112,15 @@ function AdminPage() {
       label: "Luva de Ouro",
     },
 
-    {
-      id: "best_young_player",
-      label: "Melhor jogador jovem",
-    },
+    // {
+    //   id: "best_young_player",
+    //   label: "Melhor jogador jovem",
+    // },
 
-    {
-      id: "surprise_team",
-      label: "Seleção surpresa",
-    },
+    // {
+    //   id: "surprise_team",
+    //   label: "Seleção surpresa",
+    // },
   ];
 
   type PlayerSpecialCategory = "golden_boot" | "golden_ball" | "golden_glove" | "best_young_player";
@@ -147,6 +147,64 @@ function AdminPage() {
     }
 
     return players;
+  }
+
+  async function saveAllResults() {
+    try {
+      const matchInputs = document.querySelectorAll<HTMLInputElement>("[data-match-result-input]");
+
+      const matchMap = new Map<string, { home?: number; away?: number }>();
+
+      matchInputs.forEach((input) => {
+        const matchId = input.dataset.matchId;
+        const side = input.dataset.side;
+
+        if (!matchId || !side) return;
+
+        const value = Number(input.value);
+
+        if (!matchMap.has(matchId)) {
+          matchMap.set(matchId, {});
+        }
+
+        const current = matchMap.get(matchId)!;
+
+        if (side === "home") current.home = value;
+        if (side === "away") current.away = value;
+      });
+
+      for (const [matchId, score] of matchMap.entries()) {
+        if (
+          score.home === undefined ||
+          score.away === undefined ||
+          Number.isNaN(score.home) ||
+          Number.isNaN(score.away)
+        ) {
+          continue;
+        }
+
+        await saveMatchResult(matchId, score.home, score.away);
+      }
+
+      const specialInputs = document.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
+        "[data-special-result-input]",
+      );
+
+      for (const input of specialInputs) {
+        const category = input.dataset.category;
+
+        if (!category || !input.value) continue;
+
+        await saveSpecialResult(category, input.value);
+      }
+
+      await loadAdminData();
+
+      alert("Tudo salvo com sucesso");
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao salvar tudo. Veja o console.");
+    }
   }
 
   return (
@@ -246,6 +304,9 @@ function AdminPage() {
 
                 <div className="flex gap-2">
                   <input
+                    data-match-result-input
+                    data-match-id={match.id}
+                    data-side="home"
                     id={`h-${match.id}`}
                     defaultValue={existing?.home_score ?? ""}
                     type="number"
@@ -253,6 +314,9 @@ function AdminPage() {
                   />
                   ×
                   <input
+                    data-match-result-input
+                    data-match-id={match.id}
+                    data-side="away"
                     id={`a-${match.id}`}
                     defaultValue={existing?.away_score ?? ""}
                     type="number"
@@ -288,6 +352,14 @@ function AdminPage() {
               </div>
             );
           })}
+
+          <button
+            type="button"
+            onClick={saveAllResults}
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+          >
+            Salvar tudo
+          </button>
         </div>
       </section>
 
@@ -310,6 +382,8 @@ function AdminPage() {
                 <div className="flex gap-2">
                   {TEAM_SPECIALS.includes(item.id) ? (
                     <select
+                      data-special-result-input
+                      data-category={item.id}
                       id={`special-${item.id}`}
                       defaultValue={current?.result ?? ""}
                       className="rounded border border-border bg-input/40 px-3 py-2 text-foreground outline-none focus:border-primary"
@@ -354,6 +428,8 @@ function AdminPage() {
                     </select>
                   ) : (
                     <input
+                      data-special-result-input
+                      data-category={item.id}
                       id={`special-${item.id}`}
                       defaultValue={current?.result ?? ""}
                       className="rounded border border-border bg-input/40 px-3 py-2 text-foreground outline-none focus:border-primary"
