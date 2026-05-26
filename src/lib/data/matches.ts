@@ -105,6 +105,25 @@ const m = (
   dateBR: `${date}T${brTime}:00-03:00`,
 });
 
+const k = (
+  id: string,
+  stage: Stage,
+  matchday: number,
+  date: string,
+  brTime: string,
+  home: string,
+  away: string,
+  venue: string,
+): Match => ({
+  id,
+  stage,
+  matchday,
+  home,
+  away,
+  venue,
+  dateBR: `${date}T${brTime}:00-03:00`,
+});
+
 export const MATCHES: Match[] = [
   // MD1
   m("G1-01", 1, "2026-06-11", "16:00", "Mexico", "South Africa", "Estadio Banorte"),
@@ -181,6 +200,22 @@ export const MATCHES: Match[] = [
   m("G3-22", 3, "2026-06-27", "00:00", "New Zealand", "Belgium", "BC Place Stadium"),
   m("G3-23", 3, "2026-06-27", "23:00", "Jordan", "Argentina", "AT&T Stadium"),
   m("G3-24", 3, "2026-06-27", "23:00", "Algeria", "Austria", "GEHA Field at Arrowhead Stadium"),
+  // ====================
+  // TESTE MATA-MATA
+  // ====================
+
+  k("R32-01", "r32", 4, "2026-06-28", "16:00", "Brazil", "Switzerland", "MetLife"),
+  k("R32-02", "r32", 4, "2026-06-28", "20:00", "France", "Portugal", "SoFi"),
+
+  k("R16-01", "r16", 5, "2026-07-04", "16:00", "Brazil", "France", "MetLife"),
+
+  k("QF-01", "qf", 6, "2026-07-09", "16:00", "Brazil", "Argentina", "AT&T"),
+
+  k("SF-01", "sf", 7, "2026-07-14", "16:00", "Brazil", "England", "MetLife"),
+
+  k("THIRD-01", "third", 8, "2026-07-18", "16:00", "France", "Argentina", "Hard Rock"),
+
+  k("FINAL-01", "final", 9, "2026-07-19", "16:00", "Brazil", "Portugal", "MetLife"),
 ];
 
 export const GROUPS: Record<Group, string[]> = (() => {

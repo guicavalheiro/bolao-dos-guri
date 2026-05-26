@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import { MATCHES, TEAMS } from "@/lib/data/matches";
+import { MATCHES, TEAMS, type Stage } from "@/lib/data/matches";
 
 const ADMIN_EMAIL = "cavalheiro.dev@gmail.com";
 
@@ -172,22 +172,54 @@ async function upsertCurrentProfile(user: User) {
 
 const STAGE_KEY = "bolao_stage_state";
 
+const DEFAULT_STAGE_OPEN: Record<Stage, boolean> = {
+  group: true,
+  r32: false,
+  r16: false,
+  qf: false,
+  sf: false,
+  third: false,
+  final: false,
+};
+
+const LEGACY_STAGE_KEYS: Record<string, Stage> = {
+  groups: "group",
+  round32: "r32",
+  round16: "r16",
+  quarterfinals: "qf",
+  semifinals: "sf",
+};
+
+function normalizeStageOpen(raw: Record<string, boolean>): Record<Stage, boolean> {
+  const result = { ...DEFAULT_STAGE_OPEN };
+
+  for (const [key, value] of Object.entries(raw)) {
+    const stageId = LEGACY_STAGE_KEYS[key] ?? key;
+
+    if (stageId in DEFAULT_STAGE_OPEN) {
+      result[stageId as Stage] = value;
+    }
+  }
+
+  return result;
+}
+
+export function isStageOpen(stageId: Stage): boolean {
+  return getStageState().open[stageId] ?? false;
+}
+
 export function getStageState(): StageState {
   const raw = localStorage.getItem(STAGE_KEY);
 
   if (!raw) {
-    return {
-      open: {
-        groups: true,
-        round16: false,
-        quarterfinals: false,
-        semifinals: false,
-        final: false,
-      },
-    };
+    return { open: { ...DEFAULT_STAGE_OPEN } };
   }
 
-  return JSON.parse(raw);
+  const parsed = JSON.parse(raw) as StageState;
+
+  return {
+    open: normalizeStageOpen(parsed.open ?? {}),
+  };
 }
 
 export function setStageState(stageState: StageState) {
@@ -702,6 +734,8 @@ export async function getGroupRanking(groupId: string) {
 
         breakdown.push({
           matchId: pred.match_id,
+
+          stage: match?.stage,
 
           home: match ? TEAMS[match.home] : null,
 

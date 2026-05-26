@@ -10,7 +10,7 @@ import {
   type Group,
 } from "@/lib/store";
 import { Flag } from "@/components/Flag";
-import { TEAMS } from "@/lib/data/matches";
+import { STAGES, TEAMS, type Stage } from "@/lib/data/matches";
 import { PLAYERS } from "@/lib/data/players";
 
 export const Route = createFileRoute("/_auth/groups/$groupId")({
@@ -146,6 +146,12 @@ function GroupDetailsPage() {
     if (player) return player.name;
 
     return value;
+  }
+
+  function getStageLabel(stage?: Stage) {
+    if (!stage) return "";
+
+    return STAGES.find((s) => s.id === stage)?.label ?? stage;
   }
 
   return (
@@ -325,22 +331,30 @@ function GroupDetailsPage() {
                   key={`${b.matchId}-${b.reason}-${index}`}
                   className="rounded-xl border border-border bg-card p-4"
                 >
-                  <div className="mb-2 flex items-center justify-between">
-                    <div className="flex items-center gap-2 font-medium">
-                      {b.type === "match" ? (
-                        <>
-                          {b.home?.code && <Flag code={b.home.code} className="h-4 w-6" />}
+                  <div className="mb-2 flex items-start justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2 font-medium">
+                        {b.type === "match" ? (
+                          <>
+                            {b.home?.code && <Flag code={b.home.code} className="h-4 w-6" />}
 
-                          <span>vs</span>
+                            <span>vs</span>
 
-                          {b.away?.code && <Flag code={b.away.code} className="h-4 w-6" />}
-                        </>
-                      ) : (
-                        <span>{specialLabels[b.reason] ?? "Especial"}</span>
+                            {b.away?.code && <Flag code={b.away.code} className="h-4 w-6" />}
+                          </>
+                        ) : (
+                          <span>{specialLabels[b.reason] ?? "Especial"}</span>
+                        )}
+                      </div>
+
+                      {b.type === "match" && b.stage && (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {getStageLabel(b.stage)}
+                        </p>
                       )}
                     </div>
 
-                    <span className="font-semibold text-primary">+{b.points} pts</span>
+                    <span className="shrink-0 font-semibold text-primary">+{b.points} pts</span>
                   </div>
 
                   <div className="space-y-1 text-sm text-muted-foreground">

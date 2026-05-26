@@ -406,6 +406,8 @@ function AdminPage() {
                     </select>
                   ) : PLAYER_SPECIALS.includes(item.id as PlayerSpecialCategory) ? (
                     <select
+                      data-special-result-input
+                      data-category={item.id}
                       id={`special-${item.id}`}
                       defaultValue={current?.result ?? ""}
                       className="rounded border border-border bg-input/40 px-3 py-2 text-foreground outline-none focus:border-primary"

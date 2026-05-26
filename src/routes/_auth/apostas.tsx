@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { MATCHES, TEAMS, GROUPS, STAGES, type Group, type Match } from "@/lib/data/matches";
+import { MATCHES, TEAMS, GROUPS, STAGES, type Group, type Match, Stage } from "@/lib/data/matches";
 import {
-  getStageState,
   getUserBets,
+  isStageOpen,
   saveBet,
   subscribe,
   saveSpecialPrediction,
@@ -61,6 +61,14 @@ function BetsPage() {
     return () => clearInterval(id);
   }, []);
 
+  const groupOpen = isStageOpen("group");
+
+  useEffect(() => {
+    if (!groupOpen && (Object.keys(GROUPS) as Group[]).includes(activeGroup as Group)) {
+      setActiveGroup("ALL");
+    }
+  }, [groupOpen, activeGroup]);
+
   useEffect(() => {
     if (!user) return;
 
@@ -77,14 +85,13 @@ function BetsPage() {
     });
   }, [user]);
 
-  const stageOpen = getStageState().open;
-
-  const matchesByGroup = useMemo(() => {
+  const matchesByStage = useMemo(() => {
     const map: Record<string, Match[]> = {};
 
     for (const m of MATCHES) {
-      const g = TEAMS[m.home].group;
-      (map[g] ||= []).push(m);
+      const key = m.stage === "group" ? TEAMS[m.home].group : m.stage;
+
+      (map[key] ||= []).push(m);
     }
 
     return map;
@@ -92,16 +99,32 @@ function BetsPage() {
 
   if (!user) return null;
 
-  const groupOpen = stageOpen.group ?? true;
+  type VisibleSection = Group | Stage;
 
-  const visibleGroups =
+  const openKnockoutStages = STAGES.filter((s) => s.id !== "group" && isStageOpen(s.id)).map(
+    (s) => s.id,
+  );
+
+  const visibleSections: VisibleSection[] =
     activeGroup === "ALL"
-      ? (Object.keys(GROUPS) as Group[])
+      ? [...(groupOpen ? (Object.keys(GROUPS) as Group[]) : []), ...openKnockoutStages]
       : activeGroup === "SPECIALS"
         ? []
-        : [activeGroup];
+        : groupOpen
+          ? [activeGroup]
+          : [];
+
+  const openStages = STAGES.filter((s) => isStageOpen(s.id));
+
+  const pageTitle = groupOpen
+    ? "Fase de Grupos"
+    : (openStages.find((s) => s.id !== "group")?.label ?? "Apostas");
+
+  const betsOpen = openStages.length > 0;
 
   const pendingMatches = MATCHES.filter((match) => {
+    if (!isStageOpen(match.stage)) return false;
+
     const started = new Date(match.dateBR).getTime() <= now;
 
     return !started && !userBets[match.id];
@@ -160,11 +183,23 @@ function BetsPage() {
     return value;
   }
 
+  function isGroupSection(section: VisibleSection): section is Group {
+    return Object.keys(GROUPS).includes(section);
+  }
+
+  function getSectionTitle(section: VisibleSection) {
+    if (isGroupSection(section)) {
+      return `Grupo ${section}`;
+    }
+
+    return STAGES.find((s) => s.id === section)?.label ?? section;
+  }
+
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="font-display text-4xl">Fase de Grupos</h2>
+          <h2 className="font-display text-4xl">{pageTitle}</h2>
           {pendingMatches.length > 0 && (
             <div className="mt-5 rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4">
               <div className="font-medium">
@@ -186,7 +221,7 @@ function BetsPage() {
           </p>
         </div>
 
-        <StageBadge open={groupOpen} />
+        <StageBadge open={betsOpen} />
       </div>
 
       <div className="mb-6 flex flex-wrap gap-1.5">
@@ -194,11 +229,12 @@ function BetsPage() {
           Todos
         </Chip>
 
-        {(Object.keys(GROUPS) as Group[]).map((g) => (
-          <Chip key={g} active={activeGroup === g} onClick={() => setActiveGroup(g)}>
-            Grupo {g}
-          </Chip>
-        ))}
+        {groupOpen &&
+          (Object.keys(GROUPS) as Group[]).map((g) => (
+            <Chip key={g} active={activeGroup === g} onClick={() => setActiveGroup(g)}>
+              Grupo {g}
+            </Chip>
+          ))}
 
         <Chip active={activeGroup === "SPECIALS"} onClick={() => setActiveGroup("SPECIALS")}>
           Especiais
@@ -206,33 +242,35 @@ function BetsPage() {
       </div>
 
       <div className="space-y-10">
-        {visibleGroups.map((g) => (
-          <section key={g}>
+        {visibleSections.map((section) => (
+          <section key={section}>
             <header className="mb-3 flex items-center gap-3">
-              <h3 className="font-display text-2xl">Grupo {g}</h3>
+              <h3 className="font-display text-2xl">{getSectionTitle(section)}</h3>
 
-              <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                {GROUPS[g].map((t) => (
-                  <span
-                    key={t}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2 py-1"
-                  >
-                    <Flag code={TEAMS[t].code} className="h-3 w-4.5" />
-                    {TEAMS[t].name}
-                  </span>
-                ))}
-              </div>
+              {isGroupSection(section) && (
+                <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                  {GROUPS[section].map((t) => (
+                    <span
+                      key={t}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2 py-1"
+                    >
+                      <Flag code={TEAMS[t].code} className="h-3 w-4.5" />
+                      {TEAMS[t].name}
+                    </span>
+                  ))}
+                </div>
+              )}
             </header>
 
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              {(matchesByGroup[g] || [])
+              {(matchesByStage[section] || [])
                 .sort((a, b) => a.dateBR.localeCompare(b.dateBR))
                 .map((m) => (
                   <MatchCard
                     key={m.id}
                     match={m}
                     bet={userBets[m.id]}
-                    disabled={!groupOpen}
+                    disabled={!isStageOpen(isGroupSection(section) ? "group" : section)}
                     onSave={async (h, a) => {
                       try {
                         console.log("Salvando aposta:", {
@@ -464,12 +502,12 @@ function BetsPage() {
             <span
               key={s.id}
               className={`rounded-full border px-3 py-1 text-xs ${
-                stageOpen[s.id]
+                isStageOpen(s.id)
                   ? "border-primary text-primary"
                   : "border-border text-muted-foreground"
               }`}
             >
-              {s.label} {stageOpen[s.id] ? "· aberta" : "· bloqueada"}
+              {s.label} {isStageOpen(s.id) ? "· aberta" : "· bloqueada"}
             </span>
           ))}
         </div>
