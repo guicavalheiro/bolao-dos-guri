@@ -726,7 +726,12 @@ export async function getGroupRanking(groupId: string) {
     if (specialEnabled) {
       specialPredictions
 
-        ?.filter((s) => s.user_id === member.user_id)
+        ?.filter(
+          (s) =>
+            s.user_id === member.user_id &&
+            s.category !== "surprise_team" &&
+            s.category !== "best_young_player",
+        )
 
         .forEach((pred) => {
           const result = specialResults?.find((r) => r.category === pred.category);
@@ -742,15 +747,37 @@ export async function getGroupRanking(groupId: string) {
                 break;
 
               case "runner_up":
-                gained = 15;
+                gained = 25;
                 break;
 
               case "third_place":
+                gained = 15;
+                break;
+
+              case "golden_boot":
+                gained = 15;
+                break;
+
+              case "golden_ball":
+                gained = 15;
+                break;
+
+              case "golden_glove":
+                gained = 15;
+                break;
+
+              /*
+              case "best_young_player":
                 gained = 10;
                 break;
 
-              default:
+              case "surprise_team":
                 gained = 10;
+                break;
+              */
+
+              default:
+                gained = 0;
             }
           }
 

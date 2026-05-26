@@ -34,8 +34,8 @@ const SPECIALS = [
   { id: "golden_boot", label: "Chuteira de Ouro" },
   { id: "golden_ball", label: "Bola de Ouro" },
   { id: "golden_glove", label: "Luva de Ouro" },
-  { id: "best_young_player", label: "Melhor Jogador Jovem" },
-  { id: "surprise_team", label: "Seleção Surpresa" },
+  // { id: "best_young_player", label: "Melhor Jogador Jovem" },
+  // { id: "surprise_team", label: "Seleção Surpresa" },
 ];
 
 function BetsPage() {

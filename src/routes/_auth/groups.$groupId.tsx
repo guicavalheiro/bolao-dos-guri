@@ -35,8 +35,8 @@ function GroupDetailsPage() {
     golden_boot: "Chuteira de Ouro",
     golden_ball: "Bola de Ouro",
     golden_glove: "Luva de Ouro",
-    best_young_player: "Melhor jogador jovem",
-    surprise_team: "Seleção surpresa",
+    // best_young_player: "Melhor jogador jovem",
+    // surprise_team: "Seleção surpresa",
   };
 
   async function loadGroup() {
